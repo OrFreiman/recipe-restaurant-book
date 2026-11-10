@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>הספר שלנו</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fff7ec; --card:#ffffff; --ink:#2d1f3d; --muted:#7d6f86; --line:#f0e2d0;
+    --tomato:#ff6b4a; --mango:#ffb627; --mint:#3cc4a0; --berry:#c04ce0; --sky:#4a9dff;
+    --tomato-soft:#ffe3dc; --mango-soft:#fff0cc; --mint-soft:#d8f5ec; --berry-soft:#f4defa; --sky-soft:#dcebff;
+    --radius:20px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif}
+  body{background:var(--bg);background-image:radial-gradient(circle at 90% 0%,#ffe1c7 0,transparent 40%),radial-gradient(circle at 5% 20%,#f6e0ff 0,transparent 35%);background-attachment:fixed;min-height:100vh}
+  h1,h2,h3{font-family:Fredoka,Rubik,sans-serif;font-weight:600;margin:0}
+  button,input,select,textarea{font:inherit;color:inherit}
+  input,select,textarea{font-size:16px} /* prevents iPhone zoom */
+  .wrap{max-width:760px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px calc(100px + env(safe-area-inset-bottom))}
+
+  header.top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .logo{width:48px;height:48px;border-radius:15px;background:var(--tomato);display:grid;place-items:center;font-size:26px;transform:rotate(6deg);box-shadow:0 4px 0 #d94e30;flex:none;transition:background .2s}
+  header.top h1{font-size:25px;font-weight:700;line-height:1.1}
+  header.top .sub{color:var(--muted);font-size:13px}
+
+  /* bottom tab bar */
+  .tabbar{position:fixed;bottom:0;left:0;right:0;z-index:8;display:flex;justify-content:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:rgba(255,247,236,.92);backdrop-filter:blur(8px);border-top:2px solid var(--line)}
+  .tabbar .inner{display:flex;gap:8px;width:100%;max-width:420px}
+  .tab{flex:1;border:0;background:transparent;border-radius:16px;padding:9px 6px;cursor:pointer;font-family:Fredoka,sans-serif;font-weight:600;font-size:16px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px}
+  .tab .e{font-size:22px;line-height:1}
+  .tab.on{background:var(--ink);color:#fff}
+
+  .btn{border:2px solid var(--line);background:var(--card);border-radius:14px;padding:9px 15px;cursor:pointer;font-weight:500;transition:transform .08s;min-height:44px}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--tomato);border-color:var(--tomato);color:#fff;font-family:Fredoka,sans-serif;font-weight:600;box-shadow:0 3px 0 #d94e30}
+  .btn.green{background:var(--mint);border-color:var(--mint);color:#fff;box-shadow:0 3px 0 #2a9e80}
+  .btn.danger{color:#c62828}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .btn.small{min-height:36px;padding:5px 11px;font-size:14px;border-radius:11px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .iconbtn{width:40px;height:40px;border-radius:12px;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:16px;flex:none;padding:0}
+  .iconbtn:disabled{opacity:.3}
+
+  .quick{background:var(--card);border:2px dashed #ffc9b8;border-radius:var(--radius);padding:14px;margin-bottom:16px;display:flex;flex-direction:column;gap:9px}
+  .quick.green{border-color:#a8e6d4}
+  .quick .title{font-family:Fredoka,sans-serif;font-weight:600;font-size:17px}
+  .row{display:flex;gap:8px}
+  .row > *{min-width:0}
+  .grow{flex:1}
+  input[type=text],input[type=url],select,textarea{border:2px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;width:100%}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--mango)}
+  input[type=url]{direction:ltr;text-align:left}
+  input[type=url]::placeholder{text-align:right}
+  textarea{resize:vertical;min-height:110px}
+  .photobtn{position:relative;overflow:hidden;display:inline-flex;align-items:center;gap:6px;border:2px dashed var(--line);background:#fffaf3;border-radius:12px;padding:8px 12px;cursor:pointer;font-size:15px;min-height:44px}
+  .vh{position:absolute!important;width:1px!important;height:1px!important;opacity:0;overflow:hidden;pointer-events:none}
+  .pastebox{width:auto!important;flex:1 1 150px;min-height:44px;border-style:dashed!important;background:#fffaf3!important;font-size:15px!important}
+  .pastebox:focus{caret-color:transparent}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap}
+  .thumb{position:relative;width:64px;height:64px;border-radius:12px;overflow:hidden;background:var(--line)}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb button{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;cursor:pointer;display:grid;place-items:center;padding:0}
+  .thumb.loading::after{content:"⏳";position:absolute;inset:0;display:grid;place-items:center;background:rgba(255,255,255,.6)}
+
+  .filters{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+  .chips{display:flex;gap:7px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none;margin:0 -14px;padding-inline:14px}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;border:2px solid var(--line);background:var(--card);border-radius:999px;padding:6px 13px;cursor:pointer;font-size:14px}
+  .chip.on{background:var(--mango);border-color:var(--mango);font-weight:600}
+  .chip .n{opacity:.55;margin-inline-start:4px;font-size:12px}
+  .search-row{display:flex;gap:8px}
+  .search-row input{flex:1}
+  .search-row select{width:auto}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px}
+  .card{background:var(--card);border-radius:18px;cursor:pointer;display:flex;flex-direction:column;overflow:hidden;border:2px solid var(--line);transition:transform .12s}
+  .card:active{transform:scale(.98)}
+  .card .top{aspect-ratio:4/3;display:grid;place-items:center;font-size:40px;overflow:hidden}
+  .card .top img{width:100%;height:100%;object-fit:cover;display:block}
+  .card .inner{padding:10px 11px 12px;display:flex;flex-direction:column;gap:6px}
+  .card h3{font-size:16px;line-height:1.25;word-break:break-word}
+  .meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;font-size:12px;color:var(--muted)}
+  .tag{border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;background:var(--berry-soft);color:#8a2ca6}
+  .tag.later{background:var(--mango-soft);color:#9a6400}
+  .tag.done{background:var(--mint-soft);color:#1d7a5f}
+  .tag.been{background:var(--mint-soft);color:#1d7a5f}
+
+  /* restaurants list */
+  .sec-title{font-family:Fredoka,sans-serif;font-weight:600;font-size:18px;margin:18px 2px 10px;display:flex;align-items:center;gap:8px}
+  .sec-title .n{font-size:13px;color:var(--muted);font-family:Rubik}
+  .plist{display:flex;flex-direction:column;gap:10px}
+  .prow{background:var(--card);border:2px solid var(--line);border-radius:18px;display:flex;align-items:stretch;overflow:hidden}
+  .prow .body{flex:1;display:flex;gap:10px;padding:10px;cursor:pointer;min-width:0;align-items:center}
+  .prow .pic{width:62px;height:62px;border-radius:14px;flex:none;display:grid;place-items:center;font-size:28px;overflow:hidden;position:relative}
+  .prow .pic img{width:100%;height:100%;object-fit:cover}
+  .prow .rank{position:absolute;top:-1px;right:-1px;background:var(--ink);color:#fff;font-family:Fredoka;font-weight:600;font-size:13px;min-width:22px;height:22px;border-radius:0 0 0 10px;display:grid;place-items:center;padding:0 5px}
+  .prow .txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .prow h3{font-size:16px;line-height:1.25;word-break:break-word}
+  .prow .small{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .prow .side{display:flex;flex-direction:column;gap:6px;padding:8px;justify-content:center;align-items:center;border-inline-start:2px solid var(--line);background:#fffaf3}
+  .prow .arrows{display:flex;flex-direction:column;gap:4px}
+  .beenbtn{border:2px solid var(--mango);background:var(--mango-soft);color:#8a5a00;border-radius:12px;padding:6px 8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;min-height:40px}
+  .prow.been{border-color:#a8e6d4}
+  .prow.been .side{background:var(--mint-soft);border-color:#a8e6d4}
+  .undo{border:2px solid var(--mint);background:#fff;color:#1d7a5f;border-radius:12px;padding:6px 8px;font-size:12px;cursor:pointer;white-space:nowrap;min-height:40px}
+
+  .empty{text-align:center;color:var(--muted);padding:34px 16px;border:2px dashed var(--line);border-radius:var(--radius);background:rgba(255,255,255,.6)}
+  .empty .big{font-size:40px;display:block;margin-bottom:6px}
+  .notice{background:var(--mango-soft);color:#6b4a10;border-radius:14px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+
+  /* sheets */
+  .overlay{position:fixed;inset:0;background:rgba(45,31,61,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+  .overlay.open{display:flex}
+  .panel{background:var(--bg);border-radius:24px 24px 0 0;max-width:680px;width:100%;max-height:94vh;overflow-y:auto;padding:16px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.2);animation:up .2s ease-out}
+  @media(min-width:700px){.overlay{align-items:center;padding:20px}.panel{border-radius:24px;max-height:90vh}}
+  @keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+  .grab{width:44px;height:5px;border-radius:9px;background:#e3d4c2;margin:0 auto 10px}
+  .panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+  .panel-head h2{font-size:23px;word-break:break-word}
+  .hero{font-size:40px;line-height:1;margin-bottom:6px}
+  .heroimg{width:100%;max-height:300px;object-fit:cover;border-radius:18px;display:block;margin-bottom:12px;cursor:zoom-in}
+  .gallery{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 12px;padding:0 16px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .gallery::-webkit-scrollbar{display:none}
+  .gallery img{height:190px;max-width:85%;object-fit:cover;border-radius:16px;scroll-snap-align:start;cursor:zoom-in;flex:none}
+  .field{margin-bottom:12px}
+  .field label.l{display:block;font-weight:600;font-size:14px;margin-bottom:5px}
+  .field .hint{font-weight:400;color:var(--muted)}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;border:2px solid var(--line);background:#fff;border-radius:12px;padding:9px;cursor:pointer;min-height:44px}
+  .seg button.on{border-color:var(--sky);background:var(--sky-soft);font-weight:600}
+  .actions{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:8px}
+  .actions .right{display:flex;gap:8px}
+  .links{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .linkbox{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px;text-decoration:none;color:var(--ink)}
+  .linkbox .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:18px;flex:none}
+  .linkbox .tx{display:flex;flex-direction:column;min-width:0}
+  .linkbox .tx b{font-weight:600;word-break:break-word}
+  .linkbox .tx span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right}
+  .section{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+  .section h3{font-size:17px;margin-bottom:8px}
+  .section .body{white-space:pre-wrap;word-break:break-word}
+  .section.missing{color:var(--muted);font-style:italic}
+  .foot{font-size:12px;color:var(--muted);margin-top:4px}
+  .confirm{display:none;background:#fdecea;border-radius:14px;padding:10px 12px;margin-top:10px;font-size:14px}
+  .confirm.open{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .cat-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  .cat-item{display:flex;gap:8px;align-items:center}
+  .cat-item input{flex:1}
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:30;display:none;align-items:center;justify-content:center}
+  .lightbox.open{display:flex}
+  .lightbox img{max-width:100%;max-height:100%;object-fit:contain}
+  .lightbox button{position:absolute;top:calc(12px + env(safe-area-inset-top));left:12px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:20px;cursor:pointer}
+  .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;transition:all .2s;pointer-events:none;z-index:40;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo" id="logo">🍳</div>
+    <div>
+      <h1>הספר שלנו</h1>
+      <div class="sub" id="countLine">טוען…</div>
+    </div>
+  </header>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <!-- RECIPES -->
+  <section id="recipesView">
+    <form class="quick" id="quickForm" autocomplete="off">
+      <div class="title">✨ מתכון חדש</div>
+      <input type="text" id="qName" placeholder="שם המתכון (למשל: אורז פרסי עם תחדיג)">
+      <input type="url" id="qUrl" placeholder="קישור (אינסטגרם, פייסבוק…)" inputmode="url">
+      <select id="qCat"></select>
+      <input type="text" id="qNewCat" placeholder="שם הקטגוריה החדשה" hidden>
+      <div class="row" style="align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <div class="row" style="align-items:center;gap:8px;flex-wrap:wrap">
+          <button type="button" class="photobtn" data-needs-assets data-file="qPhoto">📷 תמונות</button><input type="file" accept="image/*" multiple id="qPhoto" class="vh">
+          <div class="thumbs" id="qThumbs"></div>
+        </div>
+        <button class="btn primary" type="submit" id="qBtn">שמירה</button>
+      </div>
+    </form>
+
+    <div class="filters">
+      <div class="chips" id="catChips"></div>
+      <div class="search-row">
+        <input type="text" id="search" placeholder="🔍 חיפוש לפי שם, מצרכים, הערות…">
+        <select id="statusFilter">
+          <option value="all">הכול</option>
+          <option value="later">שמורים לאחר כך</option>
+          <option value="done">כתובים</option>
+        </select>
+      </div>
+    </div>
+    <div id="list" class="grid"></div>
+    <div style="margin-top:18px;text-align:center">
+      <button class="btn ghost" id="manageCatsBtn">✏️ עריכת קטגוריות</button>
+    </div>
+  </section>
+
+  <!-- RESTAURANTS -->
+  <section id="placesView" hidden>
+    <form class="quick green" id="pQuickForm" autocomplete="off">
+      <div class="title">📍 מסעדה חדשה</div>
+      <input type="text" id="pqName" placeholder="שם המסעדה">
+      <textarea id="pqDesc" placeholder="תיאור (לא חובה): מה להזמין, מי המליץ…" style="min-height:64px"></textarea>
+      <input type="url" id="pqUrl" placeholder="קישור (לא חובה)" inputmode="url">
+      <input type="text" id="pqAddr" placeholder="כתובת (לא חובה)">
+      <div class="row" style="align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <div class="row" style="align-items:center;gap:8px;flex-wrap:wrap">
+          <button type="button" class="photobtn" data-needs-assets data-file="pqPhotos">📷 תמונות</button><input type="file" accept="image/*" multiple id="pqPhotos" class="vh">
+          <div class="thumbs" id="pqThumbs"></div>
+        </div>
+        <button class="btn primary green" type="submit" id="pqBtn">הוספה</button>
+      </div>
+    </form>
+    <div class="search-row" style="margin-bottom:6px">
+      <input type="text" id="pSearch" placeholder="🔍 חיפוש לפי שם, כתובת, תיאור…">
+    </div>
+    <div id="pWantWrap">
+      <div class="sec-title">🤤 רוצים לנסות <span class="n" id="pWantN"></span></div>
+      <div class="plist" id="pWant"></div>
+    </div>
+    <div id="pBeenWrap">
+      <div class="sec-title">✅ היינו שם <span class="n" id="pBeenN"></span></div>
+      <div class="plist" id="pBeen"></div>
+    </div>
+  </section>
+</div>
+
+<nav class="tabbar"><div class="inner">
+  <button class="tab on" data-tab="recipes"><span class="e">🍝</span>מתכונים</button>
+  <button class="tab" data-tab="places"><span class="e">🍽️</span>מסעדות</button>
+</div></nav>
+
+<!-- View recipe -->
+<div class="overlay" id="viewOv">
+  <div class="panel">
+    <div class="grab"></div>
+    <div class="gallery" id="vGallery" hidden></div>
+    <div class="panel-head">
+      <div>
+        <div class="hero" id="vEmoji"></div>
+        <h2 id="vTitle" dir="auto"></h2>
+        <div class="meta" id="vMeta" style="margin-top:6px"></div>
+      </div>
+      <button class="iconbtn" data-close aria-label="סגירה">✕</button>
+    </div>
+    <div id="vLink" class="links"></div>
+    <div id="vSections"></div>
+    <div class="foot" id="vFoot"></div>
+    <div class="actions">
+      <button class="btn danger" id="vDelete">מחיקה</button>
+      <div class="right">
+        <button class="btn" data-close>סגירה</button>
+        <button class="btn primary" id="vEdit">עריכה</button>
+      </div>
+    </div>
+    <div class="confirm" id="vConfirm">
+      <span>למחוק את המתכון לשנינו?</span>
+      <span style="display:flex;gap:8px">
+        <button class="btn small" id="vConfirmNo">ביטול</button>
+        <button class="btn small primary" id="vConfirmYes" style="background:#c62828;border-color:#c62828;box-shadow:none">מחיקה</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Edit recipe -->
+<div class="overlay" id="editOv">
+  <form class="panel" id="editForm" autocomplete="off">
+    <div class="grab"></div>
+    <div class="panel-head">
+      <h2>עריכת מתכון</h2>
+      <button class="iconbtn" type="button" data-close aria-label="סגירה">✕</button>
+    </div>
+    <div class="field"><label class="l" for="eTitle">שם</label><input type="text" id="eTitle" dir="auto"></div>
+    <div class="field"><label class="l" for="eUrl">קישור</label><input type="url" id="eUrl" inputmode="url" placeholder="https://…"></div>
+    <div class="field">
+      <label class="l" for="eCat">קטגוריה</label>
+      <select id="eCat"></select>
+      <input type="text" id="eNewCat" placeholder="שם הקטגוריה החדשה" style="margin-top:8px" hidden>
+    </div>
+    <div class="field" data-needs-assets>
+      <label class="l">תמונות</label>
+      <div class="row" style="align-items:center;gap:8px;flex-wrap:wrap">
+        <button type="button" class="photobtn" data-file="ePhoto">📷 הוספת תמונות</button><input type="file" accept="image/*" multiple id="ePhoto" class="vh">
+        <div class="thumbs" id="eThumbs"></div>
+      </div>
+    </div>
+    <div class="field"><label class="l" for="eIng">מצרכים <span class="hint">(אחד בכל שורה)</span></label><textarea id="eIng" dir="auto" placeholder="2 כוסות אורז&#10;בצל קצוץ&#10;…"></textarea></div>
+    <div class="field"><label class="l" for="eSteps">אופן ההכנה</label><textarea id="eSteps" dir="auto" style="min-height:150px" placeholder="1. לשטוף את האורז…"></textarea></div>
+    <div class="field"><label class="l" for="eNotes">הערות <span class="hint">(טיפים, מה שינינו, איך יצא)</span></label><textarea id="eNotes" dir="auto" style="min-height:70px"></textarea></div>
+    <div class="actions">
+      <span></span>
+      <div class="right">
+        <button class="btn" type="button" data-close>ביטול</button>
+        <button class="btn primary" type="submit" id="eSave">שמירה</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- View restaurant -->
+<div class="overlay" id="pViewOv">
+  <div class="panel">
+    <div class="grab"></div>
+    <div class="gallery" id="pvGallery"></div>
+    <div class="panel-head">
+      <div>
+        <h2 id="pvTitle" dir="auto"></h2>
+        <div class="meta" id="pvMeta" style="margin-top:6px"></div>
+      </div>
+      <button class="iconbtn" data-close aria-label="סגירה">✕</button>
+    </div>
+    <div id="pvSections"></div>
+    <div id="pvLinks" class="links"></div>
+    <div class="foot" id="pvFoot"></div>
+    <div class="actions">
+      <button class="btn danger" id="pvDelete">מחיקה</button>
+      <div class="right">
+        <button class="btn" id="pvToggle"></button>
+        <button class="btn primary green" id="pvEdit">עריכה</button>
+      </div>
+    </div>
+    <div class="confirm" id="pvConfirm">
+      <span>למחוק את המסעדה לשנינו?</span>
+      <span style="display:flex;gap:8px">
+        <button class="btn small" id="pvConfirmNo">ביטול</button>
+        <button class="btn small primary" id="pvConfirmYes" style="background:#c62828;border-color:#c62828;box-shadow:none">מחיקה</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Edit restaurant -->
+<div class="overlay" id="pEditOv">
+  <form class="panel" id="pEditForm" autocomplete="off">
+    <div class="grab"></div>
+    <div class="panel-head">
+      <h2>עריכת מסעדה</h2>
+      <button class="iconbtn" type="button" data-close aria-label="סגירה">✕</button>
+    </div>
+    <div class="field"><label class="l" for="peName">שם המסעדה</label><input type="text" id="peName" dir="auto"></div>
+    <div class="field"><label class="l" for="peDesc">תיאור</label><textarea id="peDesc" dir="auto" style="min-height:90px"></textarea></div>
+    <div class="field"><label class="l" for="peUrl">קישור</label><input type="url" id="peUrl" inputmode="url" placeholder="https://…"></div>
+    <div class="field"><label class="l" for="peAddr">כתובת</label><input type="text" id="peAddr" dir="auto"></div>
+    <div class="field">
+      <label class="l">סטטוס</label>
+      <div class="seg" id="peStatus">
+        <button type="button" data-v="want">🤤 רוצים לנסות</button>
+        <button type="button" data-v="been">✅ היינו שם</button>
+      </div>
+    </div>
+    <div class="field" data-needs-assets>
+      <label class="l">תמונות <span class="hint">(תפריט, מנות…)</span></label>
+      <div class="row" style="align-items:center;gap:8px;flex-wrap:wrap">
+        <button type="button" class="photobtn" data-file="pePhotos">📷 הוספת תמונות</button><input type="file" accept="image/*" multiple id="pePhotos" class="vh">
+        <div class="thumbs" id="peThumbs"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <span></span>
+      <div class="right">
+        <button class="btn" type="button" data-close>ביטול</button>
+        <button class="btn primary green" type="submit" id="peSave">שמירה</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Categories -->
+<div class="overlay" id="catOv">
+  <div class="panel">
+    <div class="grab"></div>
+    <div class="panel-head">
+      <h2>קטגוריות</h2>
+      <button class="iconbtn" data-close aria-label="סגירה">✕</button>
+    </div>
+    <p class="foot" style="margin:0 0 10px">אפשר לשנות שם, למחוק או להוסיף. מתכונים מקטגוריה שנמחקה יעברו ל"אחר".</p>
+    <div class="cat-list" id="catList"></div>
+    <button class="btn" id="catAdd" type="button">+ קטגוריה</button>
+    <div class="actions">
+      <span></span>
+      <div class="right">
+        <button class="btn" data-close>ביטול</button>
+        <button class="btn primary" id="catSave">שמירה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="gateOv" style="align-items:center;padding:20px">
+  <form class="panel" id="gateForm" style="border-radius:24px;text-align:center">
+    <div style="font-size:48px">🔐</div>
+    <h2 style="margin:6px 0 4px">ברוכים הבאים לספר שלנו</h2>
+    <p class="foot" style="margin:0 0 14px">הקלידו את הסיסמה המשותפת (פעם אחת בכל טלפון)</p>
+    <input type="text" id="gatePw" autocomplete="off" placeholder="סיסמה" style="text-align:center;margin-bottom:12px">
+    <button class="btn primary" type="submit" id="gateBtn" style="width:100%">כניסה</button>
+    <div class="foot" id="gateErr" style="color:#c62828;margin-top:8px"></div>
+  </form>
+</div>
+<div class="lightbox" id="lightbox"><img id="lbImg" alt=""><button aria-label="סגירה">✕</button></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const OTHER="אחר";
+const DEFAULT_CATS=["אורז","פסטה","בשר","עוף","דגים","מרקים","סלטים","ירקות","אפייה","קינוחים",OTHER];
+const LEGACY={Rice:"אורז",Pasta:"פסטה",Meat:"בשר",Chicken:"עוף",Fish:"דגים",Soups:"מרקים",Salads:"סלטים",Vegetables:"ירקות",Baking:"אפייה",Desserts:"קינוחים",Other:OTHER};
+const EMOJI={"אורז":"🍚","פסטה":"🍝","בשר":"🥩","עוף":"🍗","דגים":"🐟","מרקים":"🍲","מרק":"🍲","סלטים":"🥗","סלט":"🥗","ירקות":"🥦","אפייה":"🥖","לחם":"🍞","קינוחים":"🍰","קינוח":"🍰","עוגות":"🎂","עוגיות":"🍪","ארוחת בוקר":"🍳","בוקר":"🍳","שתייה":"🍹","משקאות":"🍹","רטבים":"🥫","שבת":"🕯️","ילדים":"🧸","טבעוני":"🌱","צמחוני":"🌱","פיצה":"🍕","ממרחים":"🥣","אסייתי":"🥢",[OTHER]:"🍴"};
+const TINTS=["var(--tomato-soft)","var(--mango-soft)","var(--mint-soft)","var(--berry-soft)","var(--sky-soft)"];
+const $=s=>document.querySelector(s);
+
+let db=null,user=null,assets=null,myId=null;
+let recipes=[],places=[],categories=DEFAULT_CATS.slice();
+let filterCat="all",tab="recipes";
+let currentId=null,editingId=null,pCurrentId=null,pEditingId=null;
+let canWrite=true,loaded=false,pLoaded=false;
+
+/* ---------- helpers ---------- */
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2300);}
+function notice(m){const n=$("#notice");n.textContent=m||"";n.hidden=!m;}
+const catOf=r=>LEGACY[r.category]||r.category||OTHER;
+const catEmoji=c=>EMOJI[(c||"").trim()]||"🍴";
+function catTint(c){let h=0;for(const ch of (c||""))h=(h*31+ch.charCodeAt(0))>>>0;return TINTS[h%TINTS.length];}
+function sourceOf(url){if(!url)return "";try{const h=new URL(url).hostname.replace(/^www\.|^m\./,"");
+  if(h.includes("instagram"))return "אינסטגרם";if(h.includes("facebook")||h.includes("fb.watch")||h==="fb.com")return "פייסבוק";
+  if(h.includes("tiktok"))return "טיקטוק";if(h.includes("youtu"))return "יוטיוב";return h;}catch(e){return "";}}
+function srcIcon(s){return {"אינסטגרם":["📸","var(--berry-soft)"],"פייסבוק":["👍","var(--sky-soft)"],"טיקטוק":["🎵","var(--mint-soft)"],"יוטיוב":["▶️","var(--tomato-soft)"]}[s]||["🔗","var(--mango-soft)"];}
+function safeUrl(u){try{const x=new URL(u);return (x.protocol==="http:"||x.protocol==="https:")?x.href:null;}catch(e){return null;}}
+function cleanUrl(v){v=(v||"").trim();if(v&&!/^https?:\/\//i.test(v))v="https://"+v;return v;}
+const rPhotos=r=>{const a=Array.isArray(r.photos)?r.photos.slice():[];if(validId(r.photo)&&!a.includes(r.photo))a.unshift(r.photo);return a.filter(validId);};
+const isWritten=r=>!!((r.ingredients||"").trim()||(r.instructions||"").trim());
+const fmtDate=ms=>ms?new Date(ms).toLocaleDateString("he-IL",{day:"numeric",month:"short",year:"numeric"}):"";
+const blobUrl=id=>"https://drive.google.com/thumbnail?id="+encodeURIComponent(id)+"&sz=w1600";
+const validId=id=>typeof id==="string"&&/^[A-Za-z0-9_-]{8,64}$/.test(id);
+function el(tag,attrs={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==="class")e.className=v;else if(k==="text")e.textContent=v;else e.setAttribute(k,v);}for(const k of kids)if(k!=null&&k!==false)e.append(k);return e;}
+function img(id,cls){const i=el("img",{src:blobUrl(id),alt:"",loading:"lazy"});if(cls)i.className=cls;i.onerror=()=>{i.style.visibility="hidden";};return i;}
+function linkBox(url,title,sub,icon,tint){return el("a",{class:"linkbox",href:url,target:"_blank",rel:"noopener"},el("span",{class:"ic",style:"background:"+tint,text:icon}),el("span",{class:"tx"},el("b",{text:title}),el("span",{text:sub})));}
+async function names(ids){const out={};if(!user||!user.profiles)return out;try{const ps=await user.profiles(ids.filter(Boolean));for(const id of ids)out[id]=(ps&&ps[id]&&ps[id].name)||"";}catch(e){}return out;}
+async function fillFoot(elm,r,stillOpen){elm.textContent="";const n=await names([r.addedBy,r.updatedBy]);if(!stillOpen())return;const p=[];
+  if(r.createdAt)p.push("נוסף "+fmtDate(r.createdAt)+(n[r.addedBy]?" ע״י "+n[r.addedBy]:""));
+  if(r.updatedAt&&r.updatedAt!==r.createdAt)p.push("עודכן "+fmtDate(r.updatedAt)+(n[r.updatedBy]?" ע״י "+n[r.updatedBy]:""));elm.textContent=p.join(" · ");}
+function openLightbox(id){$("#lbImg").src=blobUrl(id);$("#lightbox").classList.add("open");}
+$("#lightbox").onclick=()=>$("#lightbox").classList.remove("open");
+
+/* ---------- photos ---------- */
+function decodeViaImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file);const i=new Image();i.onload=()=>{res(i);};i.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("decode"));};i.src=u;});}
+async function shrink(file){
+  let src=null,w=0,h=0;
+  try{src=await createImageBitmap(file);w=src.width;h=src.height;}catch(e){}
+  if(!src){try{src=await decodeViaImg(file);w=src.naturalWidth;h=src.naturalHeight;}catch(e){}}
+  if(!src||!w||!h)return null;
+  const max=1600,sc=Math.min(1,max/Math.max(w,h));
+  const c=document.createElement("canvas");c.width=Math.round(w*sc);c.height=Math.round(h*sc);
+  c.getContext("2d").drawImage(src,0,0,c.width,c.height);
+  return await new Promise(r=>{try{c.toBlob(b=>r(b),"image/jpeg",.82);}catch(e){r(null);}});
+}
+const OK_TYPES=/^image\/(png|jpeg|gif|webp)$/;
+async function uploadPhoto(file){
+  if(!assets)throw {code:"no_assets"};
+  let b=null;try{b=await shrink(file);}catch(e){}
+  if(b&&b.size){try{return (await assets.upload(b,{type:"image/jpeg"})).id;}catch(e){if(!OK_TYPES.test(file.type||""))throw e;}}
+  if(OK_TYPES.test(file.type||""))return (await assets.upload(file,{type:file.type})).id;
+  throw {code:"unsupported_type"};
+}
+function photoErr(e){console.error(e);const c=(e&&e.code)||"";
+  toast(c==="too_large"?"התמונה גדולה מדי":c==="unsupported_type"?"סוג הקובץ לא נתמך, נסו צילום מסך של התמונה":c==="quota_or_state"?"נגמר המקום לתמונות":c==="no_assets"||c==="not_granted"?"אין הרשאה להעלות תמונות":"העלאת התמונה נכשלה"+(c?" ("+c+")":""));}
+function removeAssets(ids){if(!assets)return;for(const id of ids||[])if(validId(id))assets.delete(id).catch(()=>{});}
+
+/* A small photo picker that uploads on pick and keeps a list of asset ids */
+function picker(inputSel,thumbsSel,multi){
+  const st={ids:[],busy:0,added:[]};
+  const draw=()=>{const box=$(thumbsSel);box.innerHTML="";
+    for(const id of st.ids){const x=el("button",{type:"button","aria-label":"הסרה",text:"✕"});x.onclick=()=>{st.ids=st.ids.filter(i=>i!==id);draw();};
+      box.append(el("div",{class:"thumb"},img(id),x));}
+    for(let i=0;i<st.busy;i++)box.append(el("div",{class:"thumb loading"}));};
+  const handle=async files=>{
+    files=files.filter(f=>f&&(!f.type||f.type.startsWith("image/")));if(!files.length)return;
+    if(!multi){files.length=1;}
+    st.busy+=files.length;draw();
+    let ok=0;for(const f of files){try{const id=await uploadPhoto(f);if(!multi)st.ids=[id];else st.ids.push(id);st.added.push(id);ok++;}catch(err){photoErr(err);}st.busy--;draw();}
+    if(ok)toast(ok>1?ok+" תמונות נוספו 📷":"התמונה נוספה 📷");
+  };
+  const inp=$(inputSel);
+  inp.addEventListener("change",e=>{const f=[...e.target.files];e.target.value="";handle(f);});
+  // paste a copied photo anywhere in the same form
+  const form=inp.closest("form");
+  if(form)form.addEventListener("paste",e=>{const f=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(x=>x.type.startsWith("image/"));if(f.length){e.preventDefault();handle(f);}});
+  st.set=ids=>{st.ids=(ids||[]).filter(validId);st.added=[];st.busy=0;draw();};
+  st.clear=()=>st.set([]);
+  return st;
+}
+const qPick=picker("#qPhoto","#qThumbs",true);
+const ePick=picker("#ePhoto","#eThumbs",true);
+const pqPick=picker("#pqPhotos","#pqThumbs",true);
+const pePick=picker("#pePhotos","#peThumbs",true);
+
+/* ---------- tabs ---------- */
+function setTab(t){
+  tab=t;
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
+  $("#recipesView").hidden=t!=="recipes";$("#placesView").hidden=t!=="places";
+  const L=$("#logo");L.textContent=t==="recipes"?"🍳":"🍽️";L.style.background=t==="recipes"?"var(--tomato)":"var(--mint)";L.style.boxShadow=t==="recipes"?"0 4px 0 #d94e30":"0 4px 0 #2a9e80";
+  try{localStorage.setItem("rb_tab",t);}catch(e){}
+  updateCount();window.scrollTo(0,0);
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+function updateCount(){
+  if(tab==="recipes"){const later=recipes.filter(r=>!isWritten(r)).length;$("#countLine").textContent=loaded?`${recipes.length} מתכונים · ${later} שמורים לאחר כך`:"טוען…";}
+  else{const want=places.filter(p=>p.status!=="been").length;$("#countLine").textContent=pLoaded?`${places.length} מסעדות · ${want} שרוצים לנסות`:"טוען…";}
+}
+
+/* ---------- categories select (with "new") ---------- */
+const NEW="__new__";
+function fillSelect(sel,value,newInput){
+  sel.innerHTML="";
+  for(const c of categories)sel.append(el("option",{value:c,text:catEmoji(c)+" "+c}));
+  sel.append(el("option",{value:NEW,text:"➕ קטגוריה חדשה…"}));
+  sel.value=categories.includes(value)?value:(categories.includes(OTHER)?OTHER:categories[0]);
+  if(newInput){newInput.hidden=true;newInput.value="";}
+}
+function wireNewCat(sel,inp){sel.addEventListener("change",()=>{inp.hidden=sel.value!==NEW;if(!inp.hidden)inp.focus();});}
+wireNewCat($("#qCat"),$("#qNewCat"));wireNewCat($("#eCat"),$("#eNewCat"));
+/* returns chosen category, creating it if needed; null if invalid */
+async function resolveCat(sel,inp){
+  if(sel.value!==NEW)return sel.value;
+  const n=inp.value.trim();if(!n){toast("כתבו שם לקטגוריה החדשה");inp.focus();return null;}
+  const exist=categories.find(c=>c.toLowerCase()===n.toLowerCase());if(exist)return exist;
+  const next=categories.filter(c=>c!==OTHER).concat([n,OTHER]);
+  await db.doc("settings/categories").set({list:next});categories=next;
+  return n;
+}
+
+/* ---------- recipes list ---------- */
+function renderChips(){
+  const box=$("#catChips");box.innerHTML="";
+  const counts={};for(const r of recipes){const c=catOf(r);counts[c]=(counts[c]||0)+1;}
+  const all=[["all","🌈 הכול",recipes.length],...categories.map(c=>[c,catEmoji(c)+" "+c,counts[c]||0])];
+  for(const [v,label,n] of all){
+    if(v!=="all"&&n===0&&filterCat!==v)continue;
+    const b=el("button",{class:"chip"+(filterCat===v?" on":""),type:"button"},label,el("span",{class:"n",text:String(n)}));
+    b.onclick=()=>{filterCat=v;render();};box.append(b);
+  }
+}
+function render(){
+  renderChips();updateCount();
+  const q=$("#search").value.trim().toLowerCase(),st=$("#statusFilter").value;
+  const list=$("#list");list.innerHTML="";
+  if(!loaded){list.append(el("div",{class:"empty",style:"grid-column:1/-1"},el("span",{class:"big",text:"🥄"}),"מערבבים את הסיר…"));return;}
+  const rows=recipes.filter(r=>{
+    if(filterCat!=="all"&&catOf(r)!==filterCat)return false;
+    if(st==="later"&&isWritten(r))return false;if(st==="done"&&!isWritten(r))return false;
+    if(q&&![r.title,r.ingredients,r.instructions,r.notes,r.url,catOf(r)].join(" ").toLowerCase().includes(q))return false;
+    return true;});
+  if(!rows.length){list.append(el("div",{class:"empty",style:"grid-column:1/-1"},el("span",{class:"big",text:recipes.length?"🤷":"🧑‍🍳"}),recipes.length?"אין מתכונים שמתאימים לסינון":"עוד אין מתכונים. הוסיפו את הראשון למעלה!"));return;}
+  for(const r of rows){
+    const w=isWritten(r),c=catOf(r);
+    const top=el("div",{class:"top",style:"background:"+catTint(c)});
+    if(rPhotos(r).length)top.append(img(rPhotos(r)[0]));else top.textContent=catEmoji(c);
+    const card=el("div",{class:"card",tabindex:"0"},top,
+      el("div",{class:"inner"},
+        el("h3",{dir:"auto",text:r.title||(sourceOf(r.url)?"מתכון מ"+sourceOf(r.url):"מתכון ללא שם")}),
+        el("div",{class:"meta"},el("span",{class:"tag",text:c}),w?el("span",{class:"tag done",text:"כתוב"}):null)));
+    card.onclick=()=>openView(r.id);card.onkeydown=e=>{if(e.key==="Enter")openView(r.id);};
+    list.append(card);
+  }
+}
+
+/* ---------- overlays ---------- */
+function openOv(id){$(id).classList.add("open");$(id).querySelector(".panel").scrollTop=0;document.body.style.overflow="hidden";}
+function closeOv(id){$(id).classList.remove("open");if(!document.querySelector(".overlay.open"))document.body.style.overflow="";}
+document.querySelectorAll(".overlay").forEach(ov=>ov.addEventListener("click",e=>{if(ov.id==="gateOv")return;if(e.target===ov||e.target.closest("[data-close]"))closeOv("#"+ov.id);}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if($("#lightbox").classList.contains("open")){$("#lightbox").classList.remove("open");return;}const o=[...document.querySelectorAll(".overlay.open")].pop();if(o&&o.id!=="gateOv")closeOv("#"+o.id);}});
+
+/* ---------- writes ---------- */
+function guardWrite(){if(!db){toast("כדי לשמור צריך להיות מחוברים ל-Claude");return false;}if(!canWrite){toast("יש לך הרשאת צפייה בלבד");return false;}return true;}
+function handleWriteError(e){console.error(e);
+  if(e&&e.code==="invalid_argument"){canWrite=false;notice("אפשר לצפות אבל לא לשמור. בקשו מהבעלים לשתף איתך את הדף כעורך/ת (Editor).");render();renderPlaces();}
+  else if(e&&e.code==="quota_exceeded")toast("אין יותר מקום. מחקו פריטים ישנים");else toast("השמירה נכשלה, נסו שוב");}
+
+/* ---------- recipe quick add ---------- */
+$("#quickForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const title=$("#qName").value.trim(),url=cleanUrl($("#qUrl").value);
+  if(!title&&!url){toast("הוסיפו שם או קישור");$("#qName").focus();return;}
+  if(url&&!safeUrl(url)){toast("הקישור לא נראה תקין");return;}
+  if(qPick.busy){toast("רגע, התמונות עוד עולות…");return;}
+  if(!guardWrite())return;
+  const btn=$("#qBtn");btn.disabled=true;
+  try{
+    const cat=await resolveCat($("#qCat"),$("#qNewCat"));if(cat==null){btn.disabled=false;return;}
+    const now=Date.now();
+    await db.collection("recipes").add({title,url,category:cat,photos:qPick.ids.slice(),photo:"",ingredients:"",instructions:"",notes:"",createdAt:now,updatedAt:now,addedBy:myId||"",updatedBy:myId||""});
+    $("#qName").value="";$("#qUrl").value="";qPick.clear();fillSelect($("#qCat"),cat,$("#qNewCat"));toast("נשמר 🎉");
+  }catch(err){handleWriteError(err);}
+  btn.disabled=false;
+});
+
+/* ---------- recipe view/edit ---------- */
+function openView(id){
+  const r=recipes.find(x=>x.id===id);if(!r)return;
+  currentId=id;$("#vConfirm").classList.remove("open");
+  const c=catOf(r);
+  const G=$("#vGallery");G.innerHTML="";const ph=rPhotos(r);G.hidden=!ph.length;
+  for(const pid of ph){const i=img(pid);i.onclick=()=>openLightbox(pid);G.append(i);}
+  $("#vEmoji").hidden=!!ph.length;$("#vEmoji").textContent=catEmoji(c);
+  $("#vTitle").textContent=r.title||"מתכון ללא שם";
+  const m=$("#vMeta");m.innerHTML="";m.append(el("span",{class:"tag",text:c}));if(isWritten(r))m.append(el("span",{class:"tag done",text:"כתוב"}));
+  const lb=$("#vLink");lb.innerHTML="";const u=safeUrl(r.url);
+  if(u){const s=sourceOf(u),[ic,t]=srcIcon(s);lb.append(linkBox(u,"לפוסט המקורי"+(s?" ב"+s:""),u,ic,t));}
+  const S=$("#vSections");S.innerHTML="";
+  const sec=(t,b,emp)=>{const has=(b||"").trim();S.append(el("div",{class:"section"+(has?"":" missing")},el("h3",{text:t}),el("div",{class:"body",dir:"auto",text:has?b:emp})));};
+  sec("🧺 מצרכים",r.ingredients,"עוד לא נכתב. לחצו על עריכה כדי להוסיף.");
+  sec("👩‍🍳 אופן ההכנה",r.instructions,"עוד לא נכתב. לחצו על עריכה כדי להוסיף.");
+  if((r.notes||"").trim())sec("📝 הערות",r.notes,"");
+  $("#vEdit").hidden=!canWrite;$("#vDelete").hidden=!canWrite;
+  openOv("#viewOv");fillFoot($("#vFoot"),r,()=>currentId===id);
+}
+function openEdit(id){
+  const r=recipes.find(x=>x.id===id);if(!r)return;editingId=id;
+  $("#eTitle").value=r.title||"";$("#eUrl").value=r.url||"";
+  fillSelect($("#eCat"),catOf(r),$("#eNewCat"));
+  ePick.set(rPhotos(r));
+  $("#eIng").value=r.ingredients||"";$("#eSteps").value=r.instructions||"";$("#eNotes").value=r.notes||"";
+  openOv("#editOv");
+}
+$("#editForm").addEventListener("submit",async e=>{
+  e.preventDefault();if(!guardWrite())return;
+  const url=cleanUrl($("#eUrl").value);if(url&&!safeUrl(url)){toast("הקישור לא נראה תקין");return;}
+  const title=$("#eTitle").value.trim();if(!url&&!title){toast("הוסיפו שם או קישור");return;}
+  if(ePick.busy){toast("רגע, התמונות עוד עולות…");return;}
+  const r=recipes.find(x=>x.id===editingId);
+  const btn=$("#eSave");btn.disabled=true;
+  try{
+    const cat=await resolveCat($("#eCat"),$("#eNewCat"));if(cat==null){btn.disabled=false;return;}
+    const photos=ePick.ids.slice();
+    await db.doc("recipes/"+editingId).update({title,url,category:cat,photos,photo:"",ingredients:$("#eIng").value.trim(),instructions:$("#eSteps").value.trim(),notes:$("#eNotes").value.trim(),updatedAt:Date.now(),updatedBy:myId||""});
+    if(r)removeAssets(rPhotos(r).filter(i=>!photos.includes(i)));
+    removeAssets(ePick.added.filter(i=>!photos.includes(i)));
+    const id=editingId;closeOv("#editOv");toast("נשמר 🎉");setTimeout(()=>openView(id),80);
+  }catch(err){handleWriteError(err);}
+  btn.disabled=false;
+});
+$("#vEdit").onclick=()=>{const id=currentId;closeOv("#viewOv");openEdit(id);};
+$("#vDelete").onclick=()=>$("#vConfirm").classList.add("open");
+$("#vConfirmNo").onclick=()=>$("#vConfirm").classList.remove("open");
+$("#vConfirmYes").onclick=async()=>{if(!guardWrite())return;const r=recipes.find(x=>x.id===currentId);
+  try{await db.doc("recipes/"+currentId).delete();if(r)removeAssets(rPhotos(r));closeOv("#viewOv");toast("נמחק");}catch(err){handleWriteError(err);}};
+$("#search").addEventListener("input",render);$("#statusFilter").addEventListener("change",render);
+
+/* ---------- categories editor ---------- */
+let draftCats=[];
+function renderCatList(){const box=$("#catList");box.innerHTML="";
+  draftCats.forEach((c,i)=>{const inp=el("input",{type:"text",dir:"auto"});inp.value=c.name;inp.oninput=()=>{draftCats[i].name=inp.value;};
+    const rm=el("button",{class:"iconbtn",type:"button","aria-label":"מחיקה",text:"✕"});rm.onclick=()=>{draftCats.splice(i,1);renderCatList();};
+    box.append(el("div",{class:"cat-item"},el("span",{text:catEmoji(c.name),style:"font-size:20px;width:26px;text-align:center"}),inp,rm));});}
+$("#manageCatsBtn").onclick=()=>{draftCats=categories.map(c=>({name:c,orig:c}));renderCatList();openOv("#catOv");};
+$("#catAdd").onclick=()=>{draftCats.push({name:"",orig:null});renderCatList();const ins=$("#catList").querySelectorAll("input");ins[ins.length-1].focus();};
+$("#catSave").onclick=async()=>{
+  if(!guardWrite())return;
+  const seen=new Set(),next=[],ren={};
+  for(const c of draftCats){const n=c.name.trim();if(!n||seen.has(n.toLowerCase()))continue;seen.add(n.toLowerCase());next.push(n);if(c.orig&&c.orig!==n)ren[c.orig]=n;}
+  if(!next.includes(OTHER))next.push(OTHER);
+  const btn=$("#catSave");btn.disabled=true;
+  try{
+    await db.doc("settings/categories").set({list:next});
+    for(const r of recipes){const cur=catOf(r);let t=ren[cur]||(next.includes(cur)?null:OTHER);if(!t&&cur!==r.category)t=cur;if(t&&t!==r.category)await db.doc("recipes/"+r.id).update({category:t});}
+    categories=next;if(filterCat!=="all"&&!categories.includes(filterCat))filterCat="all";
+    fillSelect($("#qCat"),$("#qCat").value,$("#qNewCat"));closeOv("#catOv");toast("הקטגוריות נשמרו");render();
+  }catch(err){handleWriteError(err);}
+  btn.disabled=false;
+};
+
+/* ---------- restaurants ---------- */
+const pDesc=p=>p.description!=null?p.description:(p.notes||"");
+const pLink=p=>p.url!=null?p.url:((Array.isArray(p.videos)&&p.videos[0])||p.menuUrl||"");
+const pPhotos=p=>Array.isArray(p.photos)?p.photos.filter(validId):[];
+const pOrder=p=>typeof p.order==="number"?p.order:(p.createdAt||0);
+const mapsUrl=a=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(a);
+
+function renderPlaces(){
+  updateCount();
+  const q=$("#pSearch").value.trim().toLowerCase();
+  const match=p=>!q||[p.name,pDesc(p),p.address,pLink(p)].join(" ").toLowerCase().includes(q);
+  const want=places.filter(p=>p.status!=="been").sort((a,b)=>pOrder(a)-pOrder(b));
+  const been=places.filter(p=>p.status==="been").sort((a,b)=>(b.beenAt||b.updatedAt||0)-(a.beenAt||a.updatedAt||0));
+  const W=$("#pWant"),B=$("#pBeen");W.innerHTML="";B.innerHTML="";
+  $("#pWantN").textContent=want.length?"("+want.length+")":"";$("#pBeenN").textContent=been.length?"("+been.length+")":"";
+  if(!pLoaded){W.append(el("div",{class:"empty"},el("span",{class:"big",text:"🗺️"}),"מחפשים שולחן…"));$("#pBeenWrap").hidden=true;return;}
+  const wantShown=want.filter(match),beenShown=been.filter(match);
+  if(!wantShown.length)W.append(el("div",{class:"empty"},el("span",{class:"big",text:q?"🤷":"🍽️"}),q?"לא נמצאו מסעדות":(been.length?"כל הרשימה נוסתה! 🎉 הוסיפו עוד":"עוד אין מסעדות. הוסיפו את הראשונה למעלה!")));
+  wantShown.forEach(p=>{const idx=want.indexOf(p);W.append(placeRow(p,idx,want,!q));});
+  $("#pBeenWrap").hidden=!beenShown.length;
+  beenShown.forEach(p=>B.append(placeRow(p,-1,been,false)));
+}
+function placeRow(p,idx,arr,showArrows){
+  const been=p.status==="been",ph=pPhotos(p);
+  const pic=el("div",{class:"pic",style:"background:"+(been?"var(--mint-soft)":TINTS[(idx<0?0:idx)%TINTS.length])});
+  if(ph.length)pic.append(img(ph[0]));else pic.append(been?"😋":"🍽️");
+  if(!been)pic.append(el("span",{class:"rank",text:String(idx+1)}));
+  else pic.append(el("span",{class:"rank",style:"background:var(--mint)",text:"✓"}));
+  const desc=pDesc(p).trim(),addr=(p.address||"").trim();
+  const body=el("div",{class:"body"},pic,el("div",{class:"txt"},
+    el("h3",{dir:"auto",text:p.name||"מסעדה ללא שם"}),
+    desc?el("div",{class:"small",dir:"auto",text:desc}):null,
+    addr?el("div",{class:"small",dir:"auto",text:"📍 "+addr}):null,
+    ph.length>1?el("div",{class:"small",text:"🖼️ "+ph.length+" תמונות"}):null));
+  body.onclick=()=>openPlace(p.id);
+  const side=el("div",{class:"side"});
+  if(canWrite){
+    if(!been){
+      const tb=el("button",{class:"beenbtn",type:"button",text:"✓ היינו"});tb.onclick=()=>setBeen(p,true);
+      if(showArrows){
+        const up=el("button",{class:"iconbtn",type:"button","aria-label":"להקדים",text:"▲"});up.disabled=idx===0;up.onclick=()=>move(arr,idx,-1);
+        const dn=el("button",{class:"iconbtn",type:"button","aria-label":"לדחות",text:"▼"});dn.disabled=idx===arr.length-1;dn.onclick=()=>move(arr,idx,1);
+        side.append(el("div",{class:"row",style:"gap:4px"},up,dn));
+      }
+      side.append(tb);
+    }else{const ub=el("button",{class:"undo",type:"button",text:"↩︎ לרשימה"});ub.onclick=()=>setBeen(p,false);side.append(ub);}
+  }
+  return el("div",{class:"prow"+(been?" been":"")},body,canWrite?side:null);
+}
+let moving=false;
+async function move(arr,idx,dir){
+  if(moving||!guardWrite())return;const j=idx+dir;if(j<0||j>=arr.length)return;
+  moving=true;const a=arr[idx],b=arr[j];let oa=pOrder(a),ob=pOrder(b);if(oa===ob){ob=oa+dir;}
+  // optimistic local swap
+  a.order=ob;b.order=oa;renderPlaces();
+  try{await db.doc("restaurants/"+a.id).update({order:ob});await db.doc("restaurants/"+b.id).update({order:oa});}catch(e){handleWriteError(e);}
+  moving=false;
+}
+async function setBeen(p,been){
+  if(!guardWrite())return;
+  const data=been?{status:"been",beenAt:Date.now()}:{status:"want",order:Math.max(0,...places.filter(x=>x.status!=="been").map(pOrder))+1};
+  data.updatedAt=Date.now();data.updatedBy=myId||"";
+  try{await db.doc("restaurants/"+p.id).update(data);toast(been?"איזה כיף! סומן כ״היינו שם״ 😋":"הוחזר לרשימה");if(pCurrentId===p.id&&$("#pViewOv").classList.contains("open"))setTimeout(()=>openPlace(p.id),80);}catch(e){handleWriteError(e);}
+}
+
+$("#pQuickForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const name=$("#pqName").value.trim(),url=cleanUrl($("#pqUrl").value);
+  if(!name){toast("הוסיפו את שם המסעדה");$("#pqName").focus();return;}
+  if(url&&!safeUrl(url)){toast("הקישור לא נראה תקין");return;}
+  if(pqPick.busy){toast("רגע, התמונות עוד עולות…");return;}
+  if(!guardWrite())return;
+  const btn=$("#pqBtn");btn.disabled=true;const now=Date.now();
+  const maxO=Math.max(0,...places.filter(x=>x.status!=="been").map(pOrder));
+  try{await db.collection("restaurants").add({name,description:$("#pqDesc").value.trim(),url,address:$("#pqAddr").value.trim(),photos:pqPick.ids.slice(),status:"want",order:Math.max(maxO+1,now),createdAt:now,updatedAt:now,addedBy:myId||"",updatedBy:myId||""});
+    ["#pqName","#pqDesc","#pqUrl","#pqAddr"].forEach(s=>$(s).value="");pqPick.clear();toast("נוסף לרשימה 🎉");}
+  catch(err){handleWriteError(err);}
+  btn.disabled=false;
+});
+
+function openPlace(id){
+  const p=places.find(x=>x.id===id);if(!p)return;
+  pCurrentId=id;$("#pvConfirm").classList.remove("open");
+  const G=$("#pvGallery");G.innerHTML="";const ph=pPhotos(p);G.hidden=!ph.length;
+  for(const pid of ph){const i=img(pid);i.onclick=()=>openLightbox(pid);G.append(i);}
+  $("#pvTitle").textContent=p.name||"מסעדה ללא שם";
+  const been=p.status==="been";
+  const m=$("#pvMeta");m.innerHTML="";m.append(el("span",{class:"tag "+(been?"been":"later"),text:been?"היינו שם":"רוצים לנסות"}));
+  const S=$("#pvSections");S.innerHTML="";const d=pDesc(p).trim();
+  if(d)S.append(el("div",{class:"section"},el("div",{class:"body",dir:"auto",text:d})));
+  const L=$("#pvLinks");L.innerHTML="";const addr=(p.address||"").trim();
+  if(addr)L.append(linkBox(mapsUrl(addr),addr,"פתיחה בגוגל מפות","🗺️","var(--mint-soft)"));
+  const lk=safeUrl(pLink(p));if(lk){const s=sourceOf(lk),[ic,t]=srcIcon(s);L.append(linkBox(lk,"לקישור"+(s?" ב"+s:""),lk,ic,t));}
+  if(Array.isArray(p.videos))for(const v of p.videos.slice(1)){const u=safeUrl(v);if(u){const s=sourceOf(u),[ic,t]=srcIcon(s);L.append(linkBox(u,"לקישור"+(s?" ב"+s:""),u,ic,t));}}
+  const tg=$("#pvToggle");tg.textContent=been?"↩︎ החזרה לרשימה":"✓ היינו שם";tg.onclick=()=>setBeen(p,!been);
+  [tg,$("#pvEdit"),$("#pvDelete")].forEach(b=>b.hidden=!canWrite);
+  openOv("#pViewOv");fillFoot($("#pvFoot"),p,()=>pCurrentId===id);
+}
+let peStatus="want";
+function setPeStatus(v){peStatus=v;document.querySelectorAll("#peStatus button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));}
+document.querySelectorAll("#peStatus button").forEach(b=>b.onclick=()=>setPeStatus(b.dataset.v));
+function openPlaceEdit(id){
+  const p=places.find(x=>x.id===id);if(!p)return;pEditingId=id;
+  $("#peName").value=p.name||"";$("#peDesc").value=pDesc(p);$("#peUrl").value=pLink(p);$("#peAddr").value=p.address||"";
+  setPeStatus(p.status==="been"?"been":"want");pePick.set(pPhotos(p));
+  openOv("#pEditOv");
+}
+$("#pEditForm").addEventListener("submit",async e=>{
+  e.preventDefault();if(!guardWrite())return;
+  const name=$("#peName").value.trim();if(!name){toast("הוסיפו את שם המסעדה");return;}
+  const url=cleanUrl($("#peUrl").value);if(url&&!safeUrl(url)){toast("הקישור לא נראה תקין");return;}
+  if(pePick.busy){toast("רגע, התמונות עוד עולות…");return;}
+  const p=places.find(x=>x.id===pEditingId);
+  const photos=pePick.ids.slice();
+  const data={name,description:$("#peDesc").value.trim(),url,address:$("#peAddr").value.trim(),photos,status:peStatus,updatedAt:Date.now(),updatedBy:myId||""};
+  if(p&&p.status!=="been"&&peStatus==="been")data.beenAt=Date.now();
+  if(p&&p.status==="been"&&peStatus!=="been")data.order=Math.max(0,...places.filter(x=>x.status!=="been").map(pOrder))+1;
+  const btn=$("#peSave");btn.disabled=true;
+  try{
+    await db.doc("restaurants/"+pEditingId).update(data);
+    if(p)removeAssets(pPhotos(p).filter(i=>!photos.includes(i)));
+    const id=pEditingId;closeOv("#pEditOv");toast("נשמר 🎉");setTimeout(()=>openPlace(id),80);
+  }catch(err){handleWriteError(err);}
+  btn.disabled=false;
+});
+$("#pvEdit").onclick=()=>{const id=pCurrentId;closeOv("#pViewOv");openPlaceEdit(id);};
+$("#pvDelete").onclick=()=>$("#pvConfirm").classList.add("open");
+$("#pvConfirmNo").onclick=()=>$("#pvConfirm").classList.remove("open");
+$("#pvConfirmYes").onclick=async()=>{if(!guardWrite())return;const p=places.find(x=>x.id===pCurrentId);
+  try{await db.doc("restaurants/"+pCurrentId).delete();if(p)removeAssets(pPhotos(p));closeOv("#pViewOv");toast("נמחק");}catch(err){handleWriteError(err);}};
+$("#pSearch").addEventListener("input",renderPlaces);
+
+/* ---------- startup ---------- */
+document.querySelectorAll("[data-file]").forEach(b=>b.addEventListener("click",()=>{
+  if(!assets){toast("אין הרשאה להעלות תמונות");return;}
+  const i=document.getElementById(b.dataset.file);
+  try{if(i.showPicker)i.showPicker();else i.click();}catch(e){try{i.click();}catch(e2){toast("הטלפון חסם את בחירת התמונות");}}
+}));
+document.querySelectorAll(".pastebox").forEach(i=>{i.addEventListener("input",()=>{i.value="";});i.addEventListener("keydown",e=>{if(e.key.length===1&&!e.metaKey&&!e.ctrlKey)e.preventDefault();});});
+document.querySelectorAll("[data-needs-assets]").forEach(x=>x.hidden=true);
+fillSelect($("#qCat"),OTHER,$("#qNewCat"));
+try{if(localStorage.getItem("rb_tab")==="places")setTab("places");}catch(e){}
+render();renderPlaces();
+
+/* ---------- Google Sheet connection ---------- */
+const API_URL="https://script.google.com/macros/s/AKfycbxWRLBkAQg0hZweAj82jxFxuA2MMkcpPw5mVDuMhiq706HfINpM4jD-IdQ88bLO6iio3Q/exec";
+let PW="";try{PW=localStorage.getItem("rb_pw")||"";}catch(e){}
+async function api(action,payload={}){
+  let r;
+  try{r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({pw:PW,action},payload))});}
+  catch(e){throw {code:"network"};}
+  let j;try{j=await r.json();}catch(e){throw {code:"bad_response"};}
+  if(!j.ok){if(j.error==="bad_password")showGate("הסיסמה לא נכונה");throw {code:j.error};}
+  return j;
+}
+function upsertLocal(t,it){const arr=t==="recipes"?recipes:places;const k=arr.findIndex(x=>x.id===it.id);if(k>=0)arr[k]=it;else arr.unshift(it);if(t==="recipes")render();else renderPlaces();}
+function removeLocal(t,id){if(t==="recipes"){recipes=recipes.filter(x=>x.id!==id);render();}else{places=places.filter(x=>x.id!==id);renderPlaces();}}
+async function saveRemote(t,item){const j=await api("save",{table:t,item});upsertLocal(t,j.item);return j.item;}
+const sheetDb={
+  collection(t){return{add:async d=>({id:(await saveRemote(t,d)).id})};},
+  doc(path){const [t,id]=path.split("/");return{
+    update:async d=>{await saveRemote(t,Object.assign({},d,{id}));},
+    delete:async()=>{await api("delete",{table:t,id});removeLocal(t,id);},
+    set:async d=>{if(t==="settings"&&id==="categories"){await api("setCategories",{list:d.list});categories=d.list.slice();}}
+  };}
+};
+function toB64(blob){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(",")[1]);fr.onerror=()=>rej({code:"read_failed"});fr.readAsDataURL(blob);});}
+const sheetAssets={
+  upload:async(blob,o)=>{const data=await toB64(blob);if(data.length>14e6)throw {code:"too_large"};const j=await api("upload",{data,type:(o&&o.type)||blob.type});return {id:j.id};},
+  delete:async id=>api("deletePhotos",{ids:[id]})
+};
+handleWriteError=function(e){console.error(e);const c=e&&e.code;
+  if(c==="bad_password")return;
+  toast(c==="network"?"אין חיבור לאינטרנט, נסו שוב":"השמירה נכשלה, נסו שוב");};
+
+let refreshing=false;
+async function refresh(silent){
+  if(refreshing||!PW)return;refreshing=true;
+  try{
+    const {data}=await api("list");
+    recipes=(data.recipes||[]).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    places=data.restaurants||[];
+    if(Array.isArray(data.categories)&&data.categories.length)categories=data.categories.filter(x=>typeof x==="string"&&x.trim());
+    loaded=pLoaded=true;notice("");
+    if($("#qCat").value!==NEW)fillSelect($("#qCat"),$("#qCat").value,$("#qNewCat"));
+    render();renderPlaces();
+  }catch(e){
+    if(e&&e.code!=="bad_password"&&!silent){loaded=pLoaded=true;notice("לא הצלחנו לטעון את הנתונים. בדקו את החיבור ונסו שוב.");render();renderPlaces();}
+  }
+  refreshing=false;
+}
+function showGate(msg){$("#gateErr").textContent=msg||"";openOv("#gateOv");setTimeout(()=>$("#gatePw").focus(),50);}
+$("#gateForm").addEventListener("submit",async e=>{
+  e.preventDefault();const v=$("#gatePw").value.trim();if(!v)return;
+  PW=v;$("#gateBtn").disabled=true;$("#gateErr").textContent="";
+  try{await api("check");try{localStorage.setItem("rb_pw",PW);}catch(x){}closeOv("#gateOv");toast("ברוכים הבאים! 🎉");refresh();}
+  catch(err){if(err.code!=="bad_password")$("#gateErr").textContent="אין חיבור, נסו שוב";}
+  $("#gateBtn").disabled=false;
+});
+
+(function start(){
+  db=sheetDb;assets=sheetAssets;canWrite=true;
+  document.querySelectorAll("[data-needs-assets]").forEach(x=>x.hidden=false);
+  if(!PW){loaded=pLoaded=true;render();renderPlaces();showGate();}
+  else refresh();
+  setInterval(()=>{if(document.visibilityState==="visible"&&!document.querySelector(".overlay.open"))refresh(true);},30000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refresh(true);});
+})();
+</script>
+</body>
+</html>
