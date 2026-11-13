@@ -48,6 +48,9 @@
   .btn.ghost{background:transparent;border-color:transparent}
   .btn.small{min-height:36px;padding:5px 11px;font-size:14px;border-radius:11px}
   .btn:disabled{opacity:.5;cursor:default}
+  .fetchbtn{border:2px dashed var(--mango);background:var(--mango-soft);font-weight:600;width:100%}
+  .fetchbox{display:flex;flex-direction:column;gap:8px}
+  .fetchbox .l{font-size:14px;font-weight:600}
   .iconbtn{width:40px;height:40px;border-radius:12px;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:16px;flex:none;padding:0}
   .iconbtn:disabled{opacity:.3}
 
@@ -183,6 +186,11 @@
       <div class="title">✨ מתכון חדש</div>
       <input type="text" id="qName" placeholder="שם המתכון (למשל: אורז פרסי עם תחדיג)">
       <input type="url" id="qUrl" placeholder="קישור (אינסטגרם, פייסבוק…)" inputmode="url">
+      <button type="button" class="btn small fetchbtn" id="qFetch">✨ משיכת המתכון מהקישור</button>
+      <div class="fetchbox" id="qFetched" hidden>
+        <label class="l" for="qIng">🧺 מצרכים</label><textarea id="qIng" dir="auto"></textarea>
+        <label class="l" for="qSteps">👩‍🍳 אופן ההכנה</label><textarea id="qSteps" dir="auto" style="min-height:140px"></textarea>
+      </div>
       <select id="qCat"></select>
       <input type="text" id="qNewCat" placeholder="שם הקטגוריה החדשה" hidden>
       <div class="row" style="align-items:center;justify-content:space-between;flex-wrap:wrap">
@@ -288,7 +296,7 @@
       <button class="iconbtn" type="button" data-close aria-label="סגירה">✕</button>
     </div>
     <div class="field"><label class="l" for="eTitle">שם</label><input type="text" id="eTitle" dir="auto"></div>
-    <div class="field"><label class="l" for="eUrl">קישור</label><input type="url" id="eUrl" inputmode="url" placeholder="https://…"></div>
+    <div class="field"><label class="l" for="eUrl">קישור</label><input type="url" id="eUrl" inputmode="url" placeholder="https://…"><button type="button" class="btn small fetchbtn" id="eFetch" style="margin-top:8px">✨ משיכת המתכון מהקישור</button></div>
     <div class="field">
       <label class="l" for="eCat">קטגוריה</label>
       <select id="eCat"></select>
@@ -502,6 +510,7 @@ function picker(inputSel,thumbsSel,multi){
   if(form)form.addEventListener("paste",e=>{const f=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(x=>x.type.startsWith("image/"));if(f.length){e.preventDefault();handle(f);}});
   st.set=ids=>{st.ids=(ids||[]).filter(validId);st.added=[];st.busy=0;draw();};
   st.clear=()=>st.set([]);
+  st.add=id=>{if(validId(id)&&!st.ids.includes(id)){st.ids.push(id);st.added.push(id);draw();}};
   return st;
 }
 const qPick=picker("#qPhoto","#qThumbs",true);
@@ -604,8 +613,8 @@ $("#quickForm").addEventListener("submit",async e=>{
   try{
     const cat=await resolveCat($("#qCat"),$("#qNewCat"));if(cat==null){btn.disabled=false;return;}
     const now=Date.now();
-    await db.collection("recipes").add({title,url,category:cat,photos:qPick.ids.slice(),photo:"",ingredients:"",instructions:"",notes:"",createdAt:now,updatedAt:now,addedBy:myId||"",updatedBy:myId||""});
-    $("#qName").value="";$("#qUrl").value="";qPick.clear();fillSelect($("#qCat"),cat,$("#qNewCat"));toast("נשמר 🎉");
+    await db.collection("recipes").add({title,url,category:cat,photos:qPick.ids.slice(),photo:"",ingredients:$("#qIng").value.trim(),instructions:$("#qSteps").value.trim(),notes:"",createdAt:now,updatedAt:now,addedBy:myId||"",updatedBy:myId||""});
+    $("#qName").value="";$("#qUrl").value="";$("#qIng").value="";$("#qSteps").value="";$("#qFetched").hidden=true;qPick.clear();fillSelect($("#qCat"),cat,$("#qNewCat"));toast("נשמר 🎉");
   }catch(err){handleWriteError(err);}
   btn.disabled=false;
 });
@@ -883,6 +892,72 @@ $("#gateForm").addEventListener("submit",async e=>{
   try{await api("check");try{localStorage.setItem("rb_pw",PW);}catch(x){}closeOv("#gateOv");toast("ברוכים הבאים! 🎉");refresh();}
   catch(err){if(err.code!=="bad_password")$("#gateErr").textContent="אין חיבור, נסו שוב";}
   $("#gateBtn").disabled=false;
+});
+
+/* ---------- fetch recipe from a link ---------- */
+const ING_HEAD=/^(?:[^\p{L}\d]*)(מצרכים|המצרכים|רכיבים|הרכיבים|חומרים|החומרים|מה צריך|ingredients?|you(?:'|’)ll need)(?=$|[\s:：\-–.!])/iu;
+const STEP_HEAD=/^(?:[^\p{L}\d]*)(אופן ה?הכנה|הוראות ה?הכנה|ההכנה|הכנה|שלבי ה?הכנה|instructions?|directions?|method|preparation|steps?)(?=$|[\s:：\-–.!])/iu;
+const QTY=/^(?:[-•*·▪️✔️✅🔸🔹]\s*)?(?:\d|½|¼|¾|⅓|⅔|חצי|רבע|שליש|כוס|כוסות|כף|כפות|כפית|כפיות|קורט|מעט|קופסה|קופסת|חבילה|חבילת|שן|שיני|ק"ג|גרם|מ"ל|ליטר)/;
+function cleanCaption(t){
+  return String(t||"").split("\n").map(x=>x.replace(/\s+$/,""))
+    .filter(x=>!/^\s*(#\S+\s*)+$/.test(x)&&!/^\s*\.\s*$/.test(x)).join("\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+function splitRecipe(text){
+  const t=cleanCaption(text);const lines=t.split("\n");
+  let iH=-1,sH=-1;
+  lines.forEach((l,i)=>{const x=l.trim();if(x.length>40)return;if(iH<0&&ING_HEAD.test(x))iH=i;else if(sH<0&&STEP_HEAD.test(x)&&i>iH)sH=i;});
+  const strip=(a,b)=>lines.slice(a,b).join("\n").trim();
+  const headRest=i=>lines[i].replace(ING_HEAD,"").replace(STEP_HEAD,"").replace(/^[\s:：\-–]+/,"").trim();
+  if(iH>=0){
+    const ing=[headRest(iH),strip(iH+1,sH>=0?sH:lines.length)].filter(Boolean).join("\n");
+    const steps=sH>=0?[headRest(sH),strip(sH+1,lines.length)].filter(Boolean).join("\n"):"";
+    const intro=strip(0,iH);
+    return {ingredients:ing,instructions:steps,intro};
+  }
+  // no headings: lines that look like quantities are ingredients, the rest is instructions
+  const ing=[],rest=[],pre=[];
+  for(const l of lines){const x=l.trim();const isIng=x&&x.length<70&&QTY.test(x);if(isIng)ing.push(x);else (ing.length?rest:pre).push(x);}
+  if(ing.length>=2)return {ingredients:ing.join("\n"),instructions:rest.join("\n").replace(/\n{3,}/g,"\n\n").trim(),intro:pre.join("\n").trim()};
+  return {ingredients:"",instructions:t,intro:""};
+}
+function guessTitle(caption,ogTitle){
+  const first=cleanCaption(caption).split("\n").map(x=>x.trim()).find(x=>x&&!ING_HEAD.test(x));
+  let t=first||ogTitle||"";t=t.replace(/[#@]\S+/g,"").replace(/\s+/g," ").trim();
+  if(t.length>60)t=t.slice(0,57).replace(/\s+\S*$/,"")+"…";return t;
+}
+async function fetchFromLink(urlSel,btn){
+  const url=cleanUrl($(urlSel).value);
+  if(!url||!safeUrl(url)){toast("הדביקו קודם קישור");$(urlSel).focus();return null;}
+  if(!PW){showGate();return null;}
+  const label=btn.textContent;btn.disabled=true;btn.textContent="⏳ מושך את המתכון…";
+  try{
+    const j=await api("fetchLink",{url});const d=j.data||{};
+    if(!d.caption&&!d.photoId){toast("לא הצלחנו למשוך מהקישור הזה. אפשר לכתוב ידנית ✍️");return null;}
+    const parts=splitRecipe(d.caption||"");
+    return {title:guessTitle(d.caption||"",d.title||""),photoId:d.photoId||"",parts,raw:d.caption||""};
+  }catch(e){
+    toast(e&&e.code==="unknown_action"?"צריך לעדכן את הסקריפט בגוגל שיטס (ראו הוראות)":e&&e.code==="network"?"אין חיבור לאינטרנט, נסו שוב":"לא הצלחנו למשוך מהקישור. אפשר לכתוב ידנית ✍️");
+    return null;
+  }finally{btn.disabled=false;btn.textContent=label;}
+}
+$("#qFetch").addEventListener("click",async()=>{
+  const r=await fetchFromLink("#qUrl",$("#qFetch"));if(!r)return;
+  if(!$("#qName").value.trim()&&r.title)$("#qName").value=r.title;
+  if(r.photoId)qPick.add(r.photoId);
+  const p=r.parts;
+  $("#qIng").value=p.ingredients;$("#qSteps").value=p.instructions||p.intro;
+  $("#qFetched").hidden=false;
+  toast(r.raw?"המתכון נמשך! בדקו ותקנו אם צריך ✨":"נמשכה רק תמונה, את המתכון צריך לכתוב ✍️");
+});
+$("#eFetch").addEventListener("click",async()=>{
+  const r=await fetchFromLink("#eUrl",$("#eFetch"));if(!r)return;
+  if(!$("#eTitle").value.trim()&&r.title)$("#eTitle").value=r.title;
+  if(r.photoId)ePick.add(r.photoId);
+  const p=r.parts;let filled=false;
+  if(!$("#eIng").value.trim()&&p.ingredients){$("#eIng").value=p.ingredients;filled=true;}
+  const steps=p.instructions||p.intro;
+  if(!$("#eSteps").value.trim()&&steps){$("#eSteps").value=steps;filled=true;}
+  toast(filled?"המתכון נמשך! בדקו ותקנו אם צריך ✨":r.photoId?"נוספה תמונה (הטקסט שכבר כתוב לא שונה)":"לא היה מה להוסיף");
 });
 
 (function start(){
