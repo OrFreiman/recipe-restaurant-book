@@ -166,6 +166,17 @@
   .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;opacity:0;transition:all .2s;pointer-events:none;z-index:40;white-space:nowrap}
   .toast.show{opacity:1;transform:translateX(-50%)}
   [hidden]{display:none!important}
+.amt{background:var(--mango-soft);border-radius:6px;padding:0 4px;font-weight:600;white-space:nowrap}
+  .fetchbox .rv{font-weight:700;font-size:15px;color:var(--tomato)}
+  .cropov{position:fixed;inset:0;background:#111;z-index:40;display:none;flex-direction:column}
+  .cropov.open{display:flex}
+  .cropov .stage{flex:1;min-height:0;position:relative}
+  .cropov .stage img{display:block;max-width:100%}
+  .cropov .bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:10px 10px calc(12px + env(safe-area-inset-bottom));background:#1d1d1d}
+  .cropov .bar .btn{background:#2c2c2c;border-color:#444;color:#fff}
+  .cropov .bar .btn.on{border-color:var(--mango);color:var(--mango)}
+  .cropov .bar .btn.primary{background:var(--tomato);border-color:var(--tomato)}
+  .cropov .ttl{color:#fff;text-align:center;padding:calc(10px + env(safe-area-inset-top)) 10px 8px;font-weight:600}
 </style>
 </head>
 <body>
@@ -188,6 +199,7 @@
       <input type="url" id="qUrl" placeholder="קישור (אינסטגרם, פייסבוק…)" inputmode="url">
       <button type="button" class="btn small fetchbtn" id="qFetch">✨ משיכת המתכון מהקישור</button>
       <div class="fetchbox" id="qFetched" hidden>
+        <div class="rv">👀 בדקו ותקנו לפני השמירה</div>
         <label class="l" for="qIng">🧺 מצרכים</label><textarea id="qIng" dir="auto"></textarea>
         <label class="l" for="qSteps">👩‍🍳 אופן ההכנה</label><textarea id="qSteps" dir="auto" style="min-height:140px"></textarea>
       </div>
@@ -421,6 +433,21 @@
     <div class="foot" id="gateErr" style="color:#c62828;margin-top:8px"></div>
   </form>
 </div>
+<div class="cropov" id="cropOv">
+  <div class="ttl">✂️ חיתוך התמונה</div>
+  <div class="stage" dir="ltr"><img id="cropImg" alt=""></div>
+  <div class="bar">
+    <button type="button" class="btn small on" data-ratio="0">חופשי</button>
+    <button type="button" class="btn small" data-ratio="1">ריבוע</button>
+    <button type="button" class="btn small" data-ratio="1.3333">4:3</button>
+    <button type="button" class="btn small" id="cropRot">⟳ סיבוב</button>
+  </div>
+  <div class="bar">
+    <button type="button" class="btn small" id="cropCancel">ביטול</button>
+    <button type="button" class="btn small" id="cropSkip">בלי חיתוך</button>
+    <button type="button" class="btn small primary" id="cropOk">✓ שמירה</button>
+  </div>
+</div>
 <div class="lightbox" id="lightbox"><img id="lbImg" alt=""><button aria-label="סגירה">✕</button></div>
 <div class="toast" id="toast"></div>
 
@@ -489,6 +516,38 @@ function photoErr(e){console.error(e);const c=(e&&e.code)||"";
   toast(c==="too_large"?"התמונה גדולה מדי":c==="unsupported_type"?"סוג הקובץ לא נתמך, נסו צילום מסך של התמונה":c==="quota_or_state"?"נגמר המקום לתמונות":c==="no_assets"||c==="not_granted"?"אין הרשאה להעלות תמונות":"העלאת התמונה נכשלה"+(c?" ("+c+")":""));}
 function removeAssets(ids){if(!assets)return;for(const id of ids||[])if(validId(id))assets.delete(id).catch(()=>{});}
 
+/* ---------- crop ---------- */
+function loadCropper(){
+  if(window.Cropper)return Promise.resolve();
+  if(loadCropper.p)return loadCropper.p;
+  loadCropper.p=new Promise((res,rej)=>{
+    const l=document.createElement("link");l.rel="stylesheet";l.href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css";document.head.append(l);
+    const sc=document.createElement("script");sc.src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js";
+    sc.onload=()=>res();sc.onerror=()=>{loadCropper.p=null;rej(new Error("cropper"));};document.head.append(sc);
+  });
+  return loadCropper.p;
+}
+/* Shows the crop screen. Resolves to the cropped image, the original (no crop), or null (cancelled). */
+async function cropImage(file){
+  try{await loadCropper();}catch(e){return file;}
+  return new Promise(resolve=>{
+    const ov=$("#cropOv"),im=$("#cropImg"),url=URL.createObjectURL(file);let cr=null,finished=false;
+    const ratioBtns=[...ov.querySelectorAll("[data-ratio]")];
+    const done=v=>{if(finished)return;finished=true;ov.classList.remove("open");try{cr&&cr.destroy();}catch(e){}
+      URL.revokeObjectURL(url);im.onload=im.onerror=null;im.removeAttribute("src");
+      ratioBtns.forEach(b=>b.onclick=null);$("#cropOk").onclick=$("#cropSkip").onclick=$("#cropCancel").onclick=$("#cropRot").onclick=null;resolve(v);};
+    ratioBtns.forEach(b=>{b.classList.toggle("on",b.dataset.ratio==="0");b.onclick=()=>{ratioBtns.forEach(x=>x.classList.toggle("on",x===b));const r=+b.dataset.ratio;if(cr)cr.setAspectRatio(r||NaN);};});
+    im.onload=()=>{try{cr=new Cropper(im,{viewMode:1,autoCropArea:.92,background:false,responsive:true,checkOrientation:true,dragMode:"move",toggleDragModeOnDblclick:false});}catch(e){done(file);}};
+    im.onerror=()=>done(file);
+    $("#cropRot").onclick=()=>{if(cr)cr.rotate(90);};
+    $("#cropCancel").onclick=()=>done(null);
+    $("#cropSkip").onclick=()=>done(file);
+    $("#cropOk").onclick=()=>{if(!cr)return done(file);let c=null;try{c=cr.getCroppedCanvas({maxWidth:2400,maxHeight:2400,imageSmoothingQuality:"high"});}catch(e){}
+      if(!c)return done(file);try{c.toBlob(b=>done(b||file),"image/jpeg",.9);}catch(e){done(file);}};
+    im.src=url;ov.classList.add("open");
+  });
+}
+
 /* A small photo picker that uploads on pick and keeps a list of asset ids */
 function picker(inputSel,thumbsSel,multi){
   const st={ids:[],busy:0,added:[]};
@@ -497,10 +556,13 @@ function picker(inputSel,thumbsSel,multi){
       box.append(el("div",{class:"thumb"},img(id),x));}
     for(let i=0;i<st.busy;i++)box.append(el("div",{class:"thumb loading"}));};
   const handle=async files=>{
+    st.cropping=(st.cropping||0)+1;try{await handle2(files);}finally{st.cropping--;}
+  };
+  const handle2=async files=>{
     files=files.filter(f=>f&&(!f.type||f.type.startsWith("image/")));if(!files.length)return;
     if(!multi){files.length=1;}
-    st.busy+=files.length;draw();
-    let ok=0;for(const f of files){try{const id=await uploadPhoto(f);if(!multi)st.ids=[id];else st.ids.push(id);st.added.push(id);ok++;}catch(err){photoErr(err);}st.busy--;draw();}
+    let ok=0;for(const f0 of files){const f=await cropImage(f0);if(!f)continue;st.busy++;draw();
+      try{const id=await uploadPhoto(f);if(!multi)st.ids=[id];else st.ids.push(id);st.added.push(id);ok++;}catch(err){photoErr(err);}st.busy--;draw();}
     if(ok)toast(ok>1?ok+" תמונות נוספו 📷":"התמונה נוספה 📷");
   };
   const inp=$(inputSel);
@@ -607,7 +669,7 @@ $("#quickForm").addEventListener("submit",async e=>{
   const title=$("#qName").value.trim(),url=cleanUrl($("#qUrl").value);
   if(!title&&!url){toast("הוסיפו שם או קישור");$("#qName").focus();return;}
   if(url&&!safeUrl(url)){toast("הקישור לא נראה תקין");return;}
-  if(qPick.busy){toast("רגע, התמונות עוד עולות…");return;}
+  if(qPick.busy||qPick.cropping){toast("רגע, התמונות עוד עולות…");return;}
   if(!guardWrite())return;
   const btn=$("#qBtn");btn.disabled=true;
   try{
@@ -620,6 +682,42 @@ $("#quickForm").addEventListener("submit",async e=>{
 });
 
 /* ---------- recipe view/edit ---------- */
+/* ---------- show ingredient amounts inside the instructions ---------- */
+const NUM_W="(?:\\d+(?:[.,/]\\d+)?(?:\\s*[-–]\\s*\\d+(?:[.,/]\\d+)?)?|[½¼¾⅓⅔⅛]|(?:חצי|רבע|שליש|אחת|אחד|שתי|שני|שתיים|שניים|שלוש|שלושה|ארבע|ארבעה|חמש|חמישה)(?=\\s))";
+const UNIT_W="(?:גרם|גר'?|ג'|ק\"ג|קג|קילו|מ\"ל|מל|ליטר|כוסות|כוס|כפות|כף|כפיות|כפית|שיני|שן|יחידות|יחידה|חבילות|חבילה|חבילת|קופסאות|קופסה|קופסת|פחית|צרור|קורט|גביע|g|gr|grams?|kg|ml|l|cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|lbs?|pinch|cloves?)";
+const ING_AMT_FIRST=new RegExp("^("+NUM_W+"(?:\\s*"+NUM_W+")?\\s*(?:"+UNIT_W+"(?=[\\s.,]|$))?)\\s*(?:של\\s+|of\\s+)?(.+)$","iu");
+const ING_AMT_LAST=new RegExp("^(.+?)\\s*[-–:]\\s*("+NUM_W+"(?:\\s*"+NUM_W+")?\\s*(?:"+UNIT_W+")?)\\s*$","iu");
+function parseIngLine(line){
+  const x=line.replace(/^[\s\-–•*·▪️✔️✅🔸🔹]+/u,"").trim();if(!x)return null;
+  let amount="",name="";let m=x.match(ING_AMT_FIRST);
+  if(m){amount=m[1].trim();name=m[2];}else if((m=x.match(ING_AMT_LAST))){name=m[1];amount=m[2].trim();}
+  if(!amount||!name)return null;
+  name=name.split(/[,(\/]| או | or /)[0].trim().replace(/^ה(?=[א-ת]{2})/,"");
+  const words=name.split(/\s+/).filter(Boolean);if(!words.length||words[0].length<2)return null;
+  const keys=[];if(words.length>1)keys.push(words.slice(0,2).join(" "));keys.push(words[0]);
+  return {amount,keys};
+}
+function escRe(t){return t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function amountSegments(ingredients,steps){
+  const segs=[];if(!steps)return segs;
+  const items=(ingredients||"").split("\n").map(parseIngLine).filter(Boolean);
+  const hits=[];
+  for(const it of items){
+    for(const k of it.keys){
+      const heb=/[א-ת]/.test(k);
+      const re=new RegExp("(^|[^\\p{L}\\d])("+(heb?"[והבלמכש]{0,3}":"")+")("+escRe(k)+")(?=$|[^\\p{L}])","iu");
+      const m=steps.match(re);if(!m)continue;
+      const start=m.index+m[1].length;
+      const before=steps.slice(Math.max(0,start-25),start);
+      if(before.includes(it.amount))break;
+      let pre=m[2],word=m[3];if(heb&&pre.endsWith("ה")){pre=pre.slice(0,-1);word="ה"+word;}
+      hits.push({start,end:start+m[2].length+m[3].length,pre,word,amount:it.amount});break;
+    }
+  }
+  hits.sort((a,b)=>a.start-b.start);let pos=0;
+  for(const h of hits){if(h.start<pos)continue;segs.push({t:steps.slice(pos,h.start)+h.pre});segs.push({amt:h.amount});segs.push({t:" "+h.word});pos=h.end;}
+  segs.push({t:steps.slice(pos)});return segs;
+}
 function openView(id){
   const r=recipes.find(x=>x.id===id);if(!r)return;
   currentId=id;$("#vConfirm").classList.remove("open");
@@ -632,9 +730,12 @@ function openView(id){
   const lb=$("#vLink");lb.innerHTML="";const u=safeUrl(r.url);
   if(u){const s=sourceOf(u),[ic,t]=srcIcon(s);lb.append(linkBox(u,"לפוסט המקורי"+(s?" ב"+s:""),u,ic,t));}
   const S=$("#vSections");S.innerHTML="";
-  const sec=(t,b,emp)=>{const has=(b||"").trim();S.append(el("div",{class:"section"+(has?"":" missing")},el("h3",{text:t}),el("div",{class:"body",dir:"auto",text:has?b:emp})));};
+  const sec=(t,b,emp,segs)=>{const has=(b||"").trim();const body=el("div",{class:"body",dir:"auto",text:has&&!segs?b:has?"":emp});
+    if(has&&segs)for(const g of segs)body.append(g.amt?el("span",{class:"amt",text:g.amt}):document.createTextNode(g.t));
+    S.append(el("div",{class:"section"+(has?"":" missing")},el("h3",{text:t}),body));};
   sec("🧺 מצרכים",r.ingredients,"עוד לא נכתב. לחצו על עריכה כדי להוסיף.");
-  sec("👩‍🍳 אופן ההכנה",r.instructions,"עוד לא נכתב. לחצו על עריכה כדי להוסיף.");
+  let segs=null;try{segs=amountSegments(r.ingredients||"",(r.instructions||"").trim());}catch(e){}
+  sec("👩‍🍳 אופן ההכנה",r.instructions,"עוד לא נכתב. לחצו על עריכה כדי להוסיף.",segs&&segs.length>1?segs:null);
   if((r.notes||"").trim())sec("📝 הערות",r.notes,"");
   $("#vEdit").hidden=!canWrite;$("#vDelete").hidden=!canWrite;
   openOv("#viewOv");fillFoot($("#vFoot"),r,()=>currentId===id);
@@ -651,7 +752,7 @@ $("#editForm").addEventListener("submit",async e=>{
   e.preventDefault();if(!guardWrite())return;
   const url=cleanUrl($("#eUrl").value);if(url&&!safeUrl(url)){toast("הקישור לא נראה תקין");return;}
   const title=$("#eTitle").value.trim();if(!url&&!title){toast("הוסיפו שם או קישור");return;}
-  if(ePick.busy){toast("רגע, התמונות עוד עולות…");return;}
+  if(ePick.busy||ePick.cropping){toast("רגע, התמונות עוד עולות…");return;}
   const r=recipes.find(x=>x.id===editingId);
   const btn=$("#eSave");btn.disabled=true;
   try{
@@ -946,7 +1047,7 @@ $("#qFetch").addEventListener("click",async()=>{
   if(r.photoId)qPick.add(r.photoId);
   const p=r.parts;
   $("#qIng").value=p.ingredients;$("#qSteps").value=p.instructions||p.intro;
-  $("#qFetched").hidden=false;
+  $("#qFetched").hidden=false;setTimeout(()=>$("#qFetched").scrollIntoView({behavior:"smooth",block:"start"}),50);
   toast(r.raw?"המתכון נמשך! בדקו ותקנו אם צריך ✨":"נמשכה רק תמונה, את המתכון צריך לכתוב ✍️");
 });
 $("#eFetch").addEventListener("click",async()=>{
