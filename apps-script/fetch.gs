@@ -142,7 +142,7 @@ function recipePart_(text) {
   const m = text.match(startRe);
   if (!m) return '';
   let part = text.slice(m.index).slice(0, 6000);
-  const endRe = /\n[*_#>\s]*(תגובות|כתיבת תגובה|מתכונים נוספים|מתכונים דומים|אולי יעניין|שתפו|שיתוף|הירשמו|תגיות|comments|related recipes|share this|you may also like)(?=$|[\s:：.!])/im;
+  const endRe = /\n[*_#>\s]*(?:\d+\s*)?(לחץ להדפסה|הדפסת המתכון|shares|המתכונים הקודמים|המתכון הקודם|המתכון הבא|תגובות|כתיבת תגובה|מתכונים נוספים|מתכונים דומים|אולי יעניין|שתפו|שיתוף|הירשמו|תגיות|comments|related recipes|share this|you may also like)(?=$|[\s:：.!])/im;
   const e = part.search(endRe);
   if (e > 80) part = part.slice(0, e);
   part = part.replace(/[*_]{1,3}/g, '').replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');

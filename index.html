@@ -202,6 +202,7 @@
         <div class="rv">👀 בדקו ותקנו לפני השמירה</div>
         <label class="l" for="qIng">🧺 מצרכים</label><textarea id="qIng" dir="auto"></textarea>
         <label class="l" for="qSteps">👩‍🍳 אופן ההכנה</label><textarea id="qSteps" dir="auto" style="min-height:140px"></textarea>
+        <label class="l" for="qNotes">📝 הערות</label><textarea id="qNotes" dir="auto" style="min-height:70px"></textarea>
       </div>
       <select id="qCat"></select>
       <input type="text" id="qNewCat" placeholder="שם הקטגוריה החדשה" hidden>
@@ -675,8 +676,8 @@ $("#quickForm").addEventListener("submit",async e=>{
   try{
     const cat=await resolveCat($("#qCat"),$("#qNewCat"));if(cat==null){btn.disabled=false;return;}
     const now=Date.now();
-    await db.collection("recipes").add({title,url,category:cat,photos:qPick.ids.slice(),photo:"",ingredients:$("#qIng").value.trim(),instructions:$("#qSteps").value.trim(),notes:"",createdAt:now,updatedAt:now,addedBy:myId||"",updatedBy:myId||""});
-    $("#qName").value="";$("#qUrl").value="";$("#qIng").value="";$("#qSteps").value="";$("#qFetched").hidden=true;qPick.clear();fillSelect($("#qCat"),cat,$("#qNewCat"));toast("נשמר 🎉");
+    await db.collection("recipes").add({title,url,category:cat,photos:qPick.ids.slice(),photo:"",ingredients:$("#qIng").value.trim(),instructions:$("#qSteps").value.trim(),notes:$("#qNotes").value.trim(),createdAt:now,updatedAt:now,addedBy:myId||"",updatedBy:myId||""});
+    $("#qName").value="";$("#qUrl").value="";$("#qIng").value="";$("#qSteps").value="";$("#qNotes").value="";$("#qFetched").hidden=true;qPick.clear();fillSelect($("#qCat"),cat,$("#qNewCat"));toast("נשמר 🎉");
   }catch(err){handleWriteError(err);}
   btn.disabled=false;
 });
@@ -684,7 +685,7 @@ $("#quickForm").addEventListener("submit",async e=>{
 /* ---------- recipe view/edit ---------- */
 /* ---------- show ingredient amounts inside the instructions ---------- */
 const NUM_W="(?:\\d+(?:[.,/]\\d+)?(?:\\s*[-–]\\s*\\d+(?:[.,/]\\d+)?)?|[½¼¾⅓⅔⅛]|(?:חצי|רבע|שליש|אחת|אחד|שתי|שני|שתיים|שניים|שלוש|שלושה|ארבע|ארבעה|חמש|חמישה)(?=\\s))";
-const UNIT_W="(?:גרם|גר'?|ג'|ק\"ג|קג|קילו|מ\"ל|מל|ליטר|כוסות|כוס|כפות|כף|כפיות|כפית|שיני|שן|יחידות|יחידה|חבילות|חבילה|חבילת|קופסאות|קופסה|קופסת|פחית|צרור|קורט|גביע|g|gr|grams?|kg|ml|l|cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|lbs?|pinch|cloves?)";
+const UNIT_W="(?:גרם|גר'?|ג'|ק\"ג|קג|קילו|מ\"ל|מל|ליטר|כוסות|כוס|כפות|כף|כפיות|כפית|שיני|שן|יחידות|יחידה|חבילות|חבילה|חבילת|קופסאות|קופסה|קופסת|פחית|צרור|קורט|גביע|ענפי|ענף|גבעולי|גבעול|שקית|שקיות|ראש|ראשי|חופן|פרוסות|פרוסה|מיכל|g|gr|grams?|kg|ml|l|cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|lbs?|pinch|cloves?)";
 const ING_AMT_FIRST=new RegExp("^("+NUM_W+"(?:\\s*"+NUM_W+")?\\s*(?:"+UNIT_W+"(?=[\\s.,]|$))?)\\s*(?:של\\s+|of\\s+)?(.+)$","iu");
 const ING_AMT_LAST=new RegExp("^(.+?)\\s*[-–:]\\s*("+NUM_W+"(?:\\s*"+NUM_W+")?\\s*(?:"+UNIT_W+")?)\\s*$","iu");
 function parseIngLine(line){
@@ -692,7 +693,7 @@ function parseIngLine(line){
   let amount="",name="";let m=x.match(ING_AMT_FIRST);
   if(m){amount=m[1].trim();name=m[2];}else if((m=x.match(ING_AMT_LAST))){name=m[1];amount=m[2].trim();}
   if(!amount||!name)return null;
-  name=name.split(/[,(\/]| או | or /)[0].trim().replace(/^ה(?=[א-ת]{2})/,"");
+  name=name.replace(/\([^)]*\)/g," ").trim().split(/[,(\/–]| או | or /)[0].trim().replace(/^ה(?=[א-ת]{2})/,"");
   const words=name.split(/\s+/).filter(Boolean);if(!words.length||words[0].length<2)return null;
   const keys=[];if(words.length>1)keys.push(words.slice(0,2).join(" "));keys.push(words[0]);
   return {amount,keys};
@@ -711,7 +712,10 @@ function amountSegments(ingredients,steps){
       const before=steps.slice(Math.max(0,start-25),start);
       if(before.includes(it.amount))break;
       let pre=m[2],word=m[3];if(heb&&pre.endsWith("ה")){pre=pre.slice(0,-1);word="ה"+word;}
-      hits.push({start,end:start+m[2].length+m[3].length,pre,word,amount:it.amount});break;
+      let st=start,amount=it.amount;
+      const toks=amount.split(/\s+/),unit=toks.length>1?toks[toks.length-1]:"";
+      if(!pre&&unit&&steps.slice(0,start).endsWith(unit+" ")){st=start-unit.length-1;amount=toks.slice(0,-1).join(" ");word=unit+" "+word;}
+      hits.push({start:st,end:start+m[2].length+m[3].length,pre,word,amount});break;
     }
   }
   hits.sort((a,b)=>a.start-b.start);let pos=0;
@@ -996,15 +1000,25 @@ $("#gateForm").addEventListener("submit",async e=>{
 });
 
 /* ---------- fetch recipe from a link ---------- */
-const ING_HEAD=/^(?:[^\p{L}\d]*)(מצרכים|המצרכים|רכיבים|הרכיבים|חומרים|החומרים|מה צריך|ingredients?|you(?:'|’)ll need)(?=$|[\s:：\-–.!])/iu;
+const ING_HEAD=/^(?:[^\p{L}\d]*)(מצרכים|צרכים|המצרכים|רכיבים|הרכיבים|חומרים|החומרים|מה צריך|ingredients?|you(?:'|’)ll need)(?=$|[\s:：\-–.!])/iu;
 const STEP_HEAD=/^(?:[^\p{L}\d]*)(אופן ה?הכנה|הוראות ה?הכנה|ההכנה|הכנה|שלבי ה?הכנה|instructions?|directions?|method|preparation|steps?)(?=$|[\s:：\-–.!])/iu;
+const NOTE_HEAD=/^(?:[^\p{L}\d]*)(הערות|טיפים|דגשים|שדרוגים|notes?|tips?)(?=$|[\s:：\-–.!])/iu;
 const QTY=/^(?:[-•*·▪️✔️✅🔸🔹]\s*)?(?:\d|½|¼|¾|⅓|⅔|חצי|רבע|שליש|כוס|כוסות|כף|כפות|כפית|כפיות|קורט|מעט|קופסה|קופסת|חבילה|חבילת|שן|שיני|ק"ג|גרם|מ"ל|ליטר)/;
 function cleanCaption(t){
   return String(t||"").split("\n").map(x=>x.replace(/\s+$/,""))
     .filter(x=>!/^\s*(#\S+\s*)+$/.test(x)&&!/^\s*\.\s*$/.test(x)).join("\n").replace(/\n{3,}/g,"\n\n").trim();
 }
 function splitRecipe(text){
-  const t=cleanCaption(text);const lines=t.split("\n");
+  let t=cleanCaption(text),notes="";
+  {const ls=t.split("\n");const k=ls.findIndex((l,i)=>i>0&&l.trim().length<40&&NOTE_HEAD.test(l.trim()));
+   if(k>0){notes=ls.slice(k+1).join("\n").replace(/\n{2,}/g,"\n").trim();t=ls.slice(0,k).join("\n").trim();}}
+  const r=splitRecipe2(t);r.notes=notes;
+  r.ingredients=r.ingredients.split("\n").filter(x=>x.trim()).join("\n");
+  r.instructions=r.instructions.replace(/\n{2,}/g,"\n").trim();
+  return r;
+}
+function splitRecipe2(t){
+  const lines=t.split("\n");
   let iH=-1,sH=-1;
   lines.forEach((l,i)=>{const x=l.trim();if(x.length>40)return;if(iH<0&&ING_HEAD.test(x))iH=i;else if(sH<0&&STEP_HEAD.test(x)&&i>iH)sH=i;});
   const strip=(a,b)=>lines.slice(a,b).join("\n").trim();
@@ -1046,7 +1060,7 @@ $("#qFetch").addEventListener("click",async()=>{
   if(!$("#qName").value.trim()&&r.title)$("#qName").value=r.title;
   if(r.photoId)qPick.add(r.photoId);
   const p=r.parts;
-  $("#qIng").value=p.ingredients;$("#qSteps").value=p.instructions||p.intro;
+  $("#qIng").value=p.ingredients;$("#qSteps").value=p.instructions||p.intro;$("#qNotes").value=p.notes||"";
   $("#qFetched").hidden=false;setTimeout(()=>$("#qFetched").scrollIntoView({behavior:"smooth",block:"start"}),50);
   toast(r.raw?"המתכון נמשך! בדקו ותקנו אם צריך ✨":"נמשכה רק תמונה, את המתכון צריך לכתוב ✍️");
 });
@@ -1058,6 +1072,7 @@ $("#eFetch").addEventListener("click",async()=>{
   if(!$("#eIng").value.trim()&&p.ingredients){$("#eIng").value=p.ingredients;filled=true;}
   const steps=p.instructions||p.intro;
   if(!$("#eSteps").value.trim()&&steps){$("#eSteps").value=steps;filled=true;}
+  if(!$("#eNotes").value.trim()&&p.notes){$("#eNotes").value=p.notes;filled=true;}
   toast(filled?"המתכון נמשך! בדקו ותקנו אם צריך ✨":r.photoId?"נוספה תמונה (הטקסט שכבר כתוב לא שונה)":"לא היה מה להוסיף");
 });
 
