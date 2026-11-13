@@ -1035,7 +1035,7 @@ async function fetchFromLink(urlSel,btn){
     const j=await api("fetchLink",{url});const d=j.data||{};
     if(!d.caption&&!d.photoId){toast("לא הצלחנו למשוך מהקישור הזה. אפשר לכתוב ידנית ✍️");return null;}
     const parts=splitRecipe(d.caption||"");
-    return {title:guessTitle(d.caption||"",d.title||""),photoId:d.photoId||"",parts,raw:d.caption||""};
+    return {title:(d.title||"").trim()||guessTitle(d.caption||"",""),photoId:d.photoId||"",parts,raw:d.caption||""};
   }catch(e){
     toast(e&&e.code==="unknown_action"?"צריך לעדכן את הסקריפט בגוגל שיטס (ראו הוראות)":e&&e.code==="network"?"אין חיבור לאינטרנט, נסו שוב":"לא הצלחנו למשוך מהקישור. אפשר לכתוב ידנית ✍️");
     return null;
