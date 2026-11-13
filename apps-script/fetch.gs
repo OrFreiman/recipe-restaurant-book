@@ -19,7 +19,9 @@ function fetchLink(url) {
   const ig = url.match(/instagram\.com\/(?:[^\/?#]+\/)?(?:p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i);
   if (ig) found = fetchInstagram_(ig[1]);
 
-  if (!found || !found.caption) {
+  if (isFb_(url)) {
+    found = mergeFound_(found, fetchFacebook_(url));
+  } else if (!found || !found.caption) {
     const html = get_(url, FETCH_UA_BROWSER) || get_(url, FETCH_UA_PREVIEW);
     if (html) found = mergeFound_(found, fromHtml_(html, url, isIg));
   }
@@ -56,6 +58,77 @@ function fetchInstagram_(code) {
     if (caption || image) return { caption: caption.trim(), image: image, title: '' };
   }
   return null;
+}
+
+/* ---------- Facebook: the preview text is cut short, so look for the full text inside the page data ---------- */
+function isFb_(url) { return /^https?:\/\/([a-z0-9-]+\.)*(facebook\.com|fb\.watch|fb\.com)\//i.test(url); }
+function fetchFacebook_(url) {
+  const pages = [];
+  const variants = [url];
+  const m = url.match(/facebook\.com\/(.*)$/i);
+  if (m) variants.push('https://m.facebook.com/' + m[1], 'https://mbasic.facebook.com/' + m[1]);
+  for (const u of variants) {
+    for (const ua of [FETCH_UA_PREVIEW, FETCH_UA_BROWSER]) {
+      const h = get_(u, ua);
+      if (h) pages.push(h);
+    }
+    if (pages.length >= 4) break;
+  }
+  if (!pages.length) return null;
+
+  let best = null;
+  for (const h of pages) {
+    const f = fromHtml_(h, url, false);
+    if (f && (!best || (f.caption || '').length > (best.caption || '').length)) best = f;
+  }
+  if (!best) return null;
+  const preview = (best.caption || '').replace(/(\.\.\.|…)\s*$/, '').trim();
+  FETCH_LOG.push('fb preview length ' + preview.length);
+  if (preview.length >= 8) {
+    let longest = '';
+    for (const h of pages) {
+      for (const len of [30, 18, 10]) {
+        const full = longestStringStartingWith_(h, preview.slice(0, len));
+        if (full.length > longest.length) longest = full;
+      }
+    }
+    FETCH_LOG.push('fb full length ' + longest.length);
+    if (longest.length > preview.length) best.caption = longest;
+  }
+  best.title = '';
+  return best;
+}
+/* Finds the longest JSON text inside the page that starts with the given words. */
+function longestStringStartingWith_(html, start) {
+  const forms = [start, jsonEscapeAll_(start), jsonEscapeAll_(start).toLowerCase()];
+  let best = '';
+  for (const f of forms) {
+    let i = html.indexOf(f);
+    let guard = 0;
+    while (i >= 0 && guard++ < 50) {
+      let a = i;                                  // go back to the opening quote
+      while (a > 0 && !(html[a - 1] === '"' && html[a - 2] !== '\\') && i - a < 40) a--;
+      if (a > 0 && html[a - 1] === '"') {
+        let b = i, n = html.length;               // go forward to the closing quote
+        while (b < n && !(html[b] === '"' && html[b - 1] !== '\\') && b - i < 20000) b++;
+        let txt = '';
+        try { txt = JSON.parse('"' + html.slice(a, b) + '"'); } catch (e) { txt = ''; }
+        if (txt.length > best.length) best = txt;
+      }
+      i = html.indexOf(f, i + f.length);
+    }
+  }
+  return best.trim();
+}
+function jsonEscapeAll_(s) {
+  let out = '';
+  for (const ch of s) {
+    const c = ch.codePointAt(0);
+    if (c < 128) { out += ch === '"' ? '\\"' : ch === '\n' ? '\\n' : ch === '/' ? '\\/' : ch; continue; }
+    const units = c > 0xffff ? [0xd800 + ((c - 0x10000) >> 10), 0xdc00 + ((c - 0x10000) & 0x3ff)] : [c];
+    for (const u of units) out += '\\u' + ('000' + u.toString(16).toUpperCase()).slice(-4);
+  }
+  return out;
 }
 
 /* ---------- Any web page ---------- */
@@ -209,6 +282,14 @@ function decodeJsonString_(s) {
     try { out = JSON.parse('"' + out + '"'); } catch (e) { break; }
   }
   return out;
+}
+
+/* Test a Facebook link: choose testFetchFacebook and press Run. */
+function testFetchFacebook() {
+  const r = fetchLink('https://www.facebook.com/share/v/1GavoxrRHc/');
+  Logger.log('debug: ' + r.debug);
+  Logger.log('photo: ' + r.photoId);
+  Logger.log(r.caption);
 }
 
 /* Test from the editor: choose testFetch and press Run, then look at the log at the bottom. */
