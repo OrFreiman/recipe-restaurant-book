@@ -49,6 +49,7 @@
   .btn.small{min-height:36px;padding:5px 11px;font-size:14px;border-radius:11px}
   .btn:disabled{opacity:.5;cursor:default}
   .fetchbtn{border:2px dashed var(--mango);background:var(--mango-soft);font-weight:600;width:100%}
+  .ocrbtn{border-color:var(--sky);background:var(--sky-soft)}
   .fetchbox{display:flex;flex-direction:column;gap:8px}
   .fetchbox .l{font-size:14px;font-weight:600}
   .iconbtn{width:40px;height:40px;border-radius:12px;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;font-size:16px;flex:none;padding:0}
@@ -198,6 +199,7 @@
       <input type="text" id="qName" placeholder="שם המתכון (למשל: אורז פרסי עם תחדיג)">
       <input type="url" id="qUrl" placeholder="קישור (אינסטגרם, פייסבוק…)" inputmode="url">
       <button type="button" class="btn small fetchbtn" id="qFetch">✨ משיכת המתכון מהקישור</button>
+      <button type="button" class="btn small fetchbtn ocrbtn" id="qOcr">📷 אין קישור? קריאת המתכון מצילומי מסך</button><input type="file" accept="image/*" multiple id="qOcrFile" class="vh">
       <div class="fetchbox" id="qFetched" hidden>
         <div class="rv">👀 בדקו ותקנו לפני השמירה</div>
         <label class="l" for="qIng">🧺 מצרכים</label><textarea id="qIng" dir="auto"></textarea>
@@ -309,7 +311,7 @@
       <button class="iconbtn" type="button" data-close aria-label="סגירה">✕</button>
     </div>
     <div class="field"><label class="l" for="eTitle">שם</label><input type="text" id="eTitle" dir="auto"></div>
-    <div class="field"><label class="l" for="eUrl">קישור</label><input type="url" id="eUrl" inputmode="url" placeholder="https://…"><button type="button" class="btn small fetchbtn" id="eFetch" style="margin-top:8px">✨ משיכת המתכון מהקישור</button></div>
+    <div class="field"><label class="l" for="eUrl">קישור</label><input type="url" id="eUrl" inputmode="url" placeholder="https://…"><button type="button" class="btn small fetchbtn" id="eFetch" style="margin-top:8px">✨ משיכת המתכון מהקישור</button><button type="button" class="btn small fetchbtn ocrbtn" id="eOcr" style="margin-top:8px">📷 קריאת המתכון מצילומי מסך</button><input type="file" accept="image/*" multiple id="eOcrFile" class="vh"></div>
     <div class="field">
       <label class="l" for="eCat">קטגוריה</label>
       <select id="eCat"></select>
@@ -495,15 +497,15 @@ $("#lightbox").onclick=()=>$("#lightbox").classList.remove("open");
 
 /* ---------- photos ---------- */
 function decodeViaImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file);const i=new Image();i.onload=()=>{res(i);};i.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("decode"));};i.src=u;});}
-async function shrink(file){
+async function shrink(file,max=1600,q=.82){
   let src=null,w=0,h=0;
   try{src=await createImageBitmap(file);w=src.width;h=src.height;}catch(e){}
   if(!src){try{src=await decodeViaImg(file);w=src.naturalWidth;h=src.naturalHeight;}catch(e){}}
   if(!src||!w||!h)return null;
-  const max=1600,sc=Math.min(1,max/Math.max(w,h));
+  const sc=Math.min(1,max/Math.max(w,h));
   const c=document.createElement("canvas");c.width=Math.round(w*sc);c.height=Math.round(h*sc);
   c.getContext("2d").drawImage(src,0,0,c.width,c.height);
-  return await new Promise(r=>{try{c.toBlob(b=>r(b),"image/jpeg",.82);}catch(e){r(null);}});
+  return await new Promise(r=>{try{c.toBlob(b=>r(b),"image/jpeg",q);}catch(e){r(null);}});
 }
 const OK_TYPES=/^image\/(png|jpeg|gif|webp)$/;
 async function uploadPhoto(file){
@@ -1055,17 +1057,56 @@ async function fetchFromLink(urlSel,btn){
     return null;
   }finally{btn.disabled=false;btn.textContent=label;}
 }
-$("#qFetch").addEventListener("click",async()=>{
-  const r=await fetchFromLink("#qUrl",$("#qFetch"));if(!r)return;
+/* ---------- read a recipe from screenshots (no link, or the link doesn't work) ---------- */
+const MONTHS="ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר";
+const OCR_JUNK=[/^\d{1,2}:\d{2}\b/,/הוספת תגובה|הוסף תגובה|add a comment|כתיבת תגובה|השב$|reply$/i,
+  /^(GIF|LTE|VoLTE|Vo|5G|4G|\d+%)$/i,new RegExp("^\\d{1,2}\\s+ב?("+MONTHS+")(\\s+\\d{4})?$"),
+  /^\d+\s*(שנים|חודשים|שבועות|ימים|שעות|דקות|ש'|ד'|[wdhm])$/i,/^(לייק|הגב|שיתוף|שתף|like|share|see translation|ראה תרגום|הצגת תרגום)$/i];
+function cleanOcr(t){
+  let ls=String(t||"").replace(/\r/g,"").split("\n").map(x=>x.replace(/\s+/g," ").trim())
+    .filter(x=>!x||!(OCR_JUNK.some(re=>re.test(x))||(!/[\p{L}]/u.test(x)&&x.length<=4&&!/[½¼¾⅓⅔⅛]/.test(x))));
+  // a screenshot that starts the instructions: skip what's above the heading (usually video subtitles)
+  const sH=ls.findIndex(x=>x.length<=40&&STEP_HEAD.test(x)),iH=ls.findIndex(x=>x.length<=40&&ING_HEAD.test(x));
+  if(sH>0&&iH<0)ls=ls.slice(sH);
+  // join lines that only wrapped because the phone screen is narrow
+  const out=[];for(const x of ls){const prev=out[out.length-1];
+    if(prev&&x&&prev.length>=38&&!/[.!?:：;)]$/.test(prev)&&!ING_HEAD.test(x)&&!STEP_HEAD.test(x)&&!NOTE_HEAD.test(x))out[out.length-1]=prev+" "+x;else out.push(x);}
+  return out.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+function ocrOrder(t){const ls=t.split("\n").map(x=>x.trim()).filter(x=>x.length<=40);
+  return ls.some(x=>ING_HEAD.test(x))?0:ls.some(x=>STEP_HEAD.test(x))?2:ls.some(x=>NOTE_HEAD.test(x))?3:1;}
+async function readScreenshots(files,btn){
+  files=files.filter(f=>f&&(!f.type||f.type.startsWith("image/")));if(!files.length)return null;
+  if(!PW){showGate();return null;}
+  const label=btn.textContent;btn.disabled=true;const chunks=[];
+  try{
+    for(let i=0;i<files.length;i++){
+      btn.textContent=files.length>1?"⏳ קורא תמונה "+(i+1)+" מתוך "+files.length+"…":"⏳ קורא את התמונה…";
+      let b=null;try{b=await shrink(files[i],2400,.9);}catch(e){}
+      if(!b)b=files[i];
+      const data=await toB64(b);if(data.length>13e6){toast("התמונה גדולה מדי");continue;}
+      const j=await api("ocrImage",{data,type:b.type||"image/jpeg"});
+      const t=cleanOcr(j.text||"");if(t)chunks.push(t);
+    }
+  }catch(e){
+    console.error(e);
+    toast(e&&e.code==="unknown_action"?"צריך לעדכן את הסקריפט בגוגל שיטס (ראו הוראות)":e&&e.code==="network"?"אין חיבור לאינטרנט, נסו שוב":"לא הצלחנו לקרוא את התמונה, נסו שוב");
+    if(!chunks.length)return null;
+  }finally{btn.disabled=false;btn.textContent=label;}
+  if(!chunks.length){toast("לא מצאנו טקסט בתמונות 🤔");return null;}
+  // ingredients screenshot first, then instructions, whatever order they were picked in
+  const text=chunks.map((t,i)=>({t,i,o:ocrOrder(t)})).sort((a,b)=>a.o-b.o||a.i-b.i).map(x=>x.t).join("\n");
+  return {title:"",photoId:"",parts:splitRecipe(text),raw:text};
+}
+function fillQuick(r,okMsg){
   if(!$("#qName").value.trim()&&r.title)$("#qName").value=r.title;
   if(r.photoId)qPick.add(r.photoId);
   const p=r.parts;
   $("#qIng").value=p.ingredients;$("#qSteps").value=p.instructions||p.intro;$("#qNotes").value=p.notes||"";
   $("#qFetched").hidden=false;setTimeout(()=>$("#qFetched").scrollIntoView({behavior:"smooth",block:"start"}),50);
-  toast(r.raw?"המתכון נמשך! בדקו ותקנו אם צריך ✨":"נמשכה רק תמונה, את המתכון צריך לכתוב ✍️");
-});
-$("#eFetch").addEventListener("click",async()=>{
-  const r=await fetchFromLink("#eUrl",$("#eFetch"));if(!r)return;
+  toast(r.raw?okMsg:"נמשכה רק תמונה, את המתכון צריך לכתוב ✍️");
+}
+function fillEdit(r,okMsg){
   if(!$("#eTitle").value.trim()&&r.title)$("#eTitle").value=r.title;
   if(r.photoId)ePick.add(r.photoId);
   const p=r.parts;let filled=false;
@@ -1073,8 +1114,15 @@ $("#eFetch").addEventListener("click",async()=>{
   const steps=p.instructions||p.intro;
   if(!$("#eSteps").value.trim()&&steps){$("#eSteps").value=steps;filled=true;}
   if(!$("#eNotes").value.trim()&&p.notes){$("#eNotes").value=p.notes;filled=true;}
-  toast(filled?"המתכון נמשך! בדקו ותקנו אם צריך ✨":r.photoId?"נוספה תמונה (הטקסט שכבר כתוב לא שונה)":"לא היה מה להוסיף");
-});
+  toast(filled?okMsg:r.photoId?"נוספה תמונה (הטקסט שכבר כתוב לא שונה)":r.raw?"השדות כבר מלאים, מחקו אותם כדי למלא מהתמונות":"לא היה מה להוסיף");
+}
+$("#qFetch").addEventListener("click",async()=>{const r=await fetchFromLink("#qUrl",$("#qFetch"));if(r)fillQuick(r,"המתכון נמשך! בדקו ותקנו אם צריך ✨");});
+$("#eFetch").addEventListener("click",async()=>{const r=await fetchFromLink("#eUrl",$("#eFetch"));if(r)fillEdit(r,"המתכון נמשך! בדקו ותקנו אם צריך ✨");});
+const OCR_OK="המתכון נקרא מהתמונות! בדקו ותקנו אם צריך ✨";
+$("#qOcr").addEventListener("click",()=>$("#qOcrFile").click());
+$("#eOcr").addEventListener("click",()=>$("#eOcrFile").click());
+$("#qOcrFile").addEventListener("change",async e=>{const f=[...e.target.files];e.target.value="";const r=await readScreenshots(f,$("#qOcr"));if(r)fillQuick(r,OCR_OK);});
+$("#eOcrFile").addEventListener("change",async e=>{const f=[...e.target.files];e.target.value="";const r=await readScreenshots(f,$("#eOcr"));if(r)fillEdit(r,OCR_OK);});
 
 (function start(){
   db=sheetDb;assets=sheetAssets;canWrite=true;
