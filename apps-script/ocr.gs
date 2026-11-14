@@ -44,14 +44,19 @@ function ocrImage(base64, type) {
     '--' + boundary + '\r\nContent-Type: ' + type + '\r\n\r\n').getBytes();
   const tail = Utilities.newBlob('\r\n--' + boundary + '--').getBytes();
 
-  const up = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&ocrLanguage=he&fields=id', {
-    method: 'post',
-    contentType: 'multipart/related; boundary=' + boundary,
-    payload: head.concat(bytes, tail),
-    headers: { Authorization: 'Bearer ' + token },
-    muteHttpExceptions: true
-  });
-  if (up.getResponseCode() >= 300) throw new Error('ocr_upload_failed: ' + up.getContentText().slice(0, 200));
+  // Hebrew hint first ('iw' is Google's code for Hebrew); if Drive rejects it, let it detect the language itself
+  let up = null;
+  for (const lang of ['iw', 'he', '']) {
+    up = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id' + (lang ? '&ocrLanguage=' + lang : ''), {
+      method: 'post',
+      contentType: 'multipart/related; boundary=' + boundary,
+      payload: head.concat(bytes, tail),
+      headers: { Authorization: 'Bearer ' + token },
+      muteHttpExceptions: true
+    });
+    if (up.getResponseCode() < 300 || up.getResponseCode() !== 400) break;
+  }
+  if (up.getResponseCode() >= 300) throw new Error('ocr_upload_failed: ' + up.getContentText().replace(/\s+/g, ' ').slice(0, 400));
   const id = JSON.parse(up.getContentText()).id;
 
   try {
@@ -59,7 +64,7 @@ function ocrImage(base64, type) {
       headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true
     });
     if (ex.getResponseCode() >= 300) throw new Error('ocr_read_failed');
-    return ex.getContentText('UTF-8').replace(/^﻿/, '').replace(/\r/g, '').trim();
+    return ex.getContentText('UTF-8').replace(/^\uFEFF/, '').replace(/\r/g, '').trim();
   } finally {
     UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id, {
       method: 'delete', headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true
