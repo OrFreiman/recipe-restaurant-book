@@ -10,4 +10,4 @@ Setup: add `apps-script/fetch.gs` as a new file in the Apps Script project, add 
 ## Read recipe from screenshots
 The "📷 קריאת המתכון מצילומי מסך" button (in the new-recipe box and in edit) lets you pick one or more screenshots/photos when there's no link or the link doesn't work. Each image is sent to the Apps Script (`ocrImage` action), which uses Google Drive's free text recognition (OCR, Hebrew) and returns the text. The app removes phone clutter (clock, "add a comment", dates), puts the ingredients screenshot before the instructions screenshot, joins wrapped lines, and splits it into ingredients / instructions / notes for review.
 
-Setup: add `apps-script/ocr.gs` as a new file in the Apps Script project, add `case 'ocrImage': return json({ ok: true, text: ocrImage(req.data, req.type) });` to the switch in `doPost`, run `testOcr`, then Deploy → Manage deployments → Edit → New version.
+Setup: paste `apps-script/ocr.gs` as a new script file named "ocr" (it includes the full doPost with the `ocrImage` action, overriding the one in the main file because it loads last), run `testOcr`, then Deploy → Manage deployments → Edit → New version.

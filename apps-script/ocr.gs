@@ -1,13 +1,34 @@
 /**
  * Read recipe text from screenshots / photos (when there is no link, or the link doesn't work).
  * Free: uses Google Drive's built-in text recognition (OCR), which handles Hebrew well.
- * The image is turned into a temporary Google Doc, its text is read, and the temp doc is deleted.
- * Used by the app's "📷 קריאת מתכון מצילומי מסך" button through the 'ocrImage' action.
  *
- * Setup: add this file to the Apps Script project, add this line inside doPost's switch, under the 'fetchLink' line:
- *   case 'ocrImage':      return json({ ok: true, text: ocrImage(req.data, req.type) });
- * run testOcr once to approve permissions, then Deploy → Manage deployments → Edit → New version.
+ * This file also holds the app's doPost (with the new 'ocrImage' action), so nothing needs to be
+ * changed in the other files. Because it is the last file in the project, this doPost is the one used.
+ * Setup: paste this whole file as a new script file named "ocr", run testOcr once,
+ * then Deploy → Manage deployments → Edit → New version.
  */
+function doPost(e) {
+  let req;
+  try { req = JSON.parse(e.postData.contents); } catch (err) { return json({ ok: false, error: 'bad_request' }); }
+  if (String(req.pw || '') !== PASSWORD) return json({ ok: false, error: 'bad_password' });
+  try {
+    switch (req.action) {
+      case 'check':         return json({ ok: true });
+      case 'list':          return json({ ok: true, data: listAll() });
+      case 'save':          return json({ ok: true, item: withLock(() => saveItem(req.table, req.item)) });
+      case 'delete':        withLock(() => deleteItem(req.table, req.id)); return json({ ok: true });
+      case 'setCategories': withLock(() => setSetting('categories', JSON.stringify(req.list || []))); return json({ ok: true });
+      case 'upload':        return json({ ok: true, id: uploadPhoto(req.data, req.type) });
+      case 'deletePhotos':  trashPhotos(req.ids); return json({ ok: true });
+      case 'fetchLink':     return json({ ok: true, data: fetchLink(req.url) });
+      case 'ocrImage':      return json({ ok: true, text: ocrImage(req.data, req.type) });
+      default:              return json({ ok: false, error: 'unknown_action' });
+    }
+  } catch (err) {
+    return json({ ok: false, error: String(err && err.message || err) });
+  }
+}
+
 function ocrImage(base64, type) {
   if (!base64) throw new Error('no_image');
   type = String(type || 'image/jpeg').split(';')[0];
