@@ -221,11 +221,6 @@
       <div class="chips" id="catChips"></div>
       <div class="search-row">
         <input type="text" id="search" placeholder="🔍 חיפוש לפי שם, מצרכים, הערות…">
-        <select id="statusFilter">
-          <option value="all">הכול</option>
-          <option value="later">שמורים לאחר כך</option>
-          <option value="done">כתובים</option>
-        </select>
       </div>
     </div>
     <div id="list" class="grid"></div>
@@ -594,7 +589,7 @@ function setTab(t){
 }
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 function updateCount(){
-  if(tab==="recipes"){const later=recipes.filter(r=>!isWritten(r)).length;$("#countLine").textContent=loaded?`${recipes.length} מתכונים · ${later} שמורים לאחר כך`:"טוען…";}
+  if(tab==="recipes"){$("#countLine").textContent=loaded?`${recipes.length} מתכונים`:"טוען…";}
   else{const want=places.filter(p=>p.status!=="been").length;$("#countLine").textContent=pLoaded?`${places.length} מסעדות · ${want} שרוצים לנסות`:"טוען…";}
 }
 
@@ -632,23 +627,23 @@ function renderChips(){
 }
 function render(){
   renderChips();updateCount();
-  const q=$("#search").value.trim().toLowerCase(),st=$("#statusFilter").value;
+  const q=$("#search").value.trim().toLowerCase();
   const list=$("#list");list.innerHTML="";
   if(!loaded){list.append(el("div",{class:"empty",style:"grid-column:1/-1"},el("span",{class:"big",text:"🥄"}),"מערבבים את הסיר…"));return;}
   const rows=recipes.filter(r=>{
     if(filterCat!=="all"&&catOf(r)!==filterCat)return false;
-    if(st==="later"&&isWritten(r))return false;if(st==="done"&&!isWritten(r))return false;
+
     if(q&&![r.title,r.ingredients,r.instructions,r.notes,r.url,catOf(r)].join(" ").toLowerCase().includes(q))return false;
     return true;});
   if(!rows.length){list.append(el("div",{class:"empty",style:"grid-column:1/-1"},el("span",{class:"big",text:recipes.length?"🤷":"🧑‍🍳"}),recipes.length?"אין מתכונים שמתאימים לסינון":"עוד אין מתכונים. הוסיפו את הראשון למעלה!"));return;}
   for(const r of rows){
-    const w=isWritten(r),c=catOf(r);
+    const c=catOf(r);
     const top=el("div",{class:"top",style:"background:"+catTint(c)});
     if(rPhotos(r).length)top.append(img(rPhotos(r)[0]));else top.textContent=catEmoji(c);
     const card=el("div",{class:"card",tabindex:"0"},top,
       el("div",{class:"inner"},
         el("h3",{dir:"auto",text:r.title||(sourceOf(r.url)?"מתכון מ"+sourceOf(r.url):"מתכון ללא שם")}),
-        el("div",{class:"meta"},el("span",{class:"tag",text:c}),w?el("span",{class:"tag done",text:"כתוב"}):null)));
+        el("div",{class:"meta"},el("span",{class:"tag",text:c}))));
     card.onclick=()=>openView(r.id);card.onkeydown=e=>{if(e.key==="Enter")openView(r.id);};
     list.append(card);
   }
@@ -732,7 +727,7 @@ function openView(id){
   for(const pid of ph){const i=img(pid);i.onclick=()=>openLightbox(pid);G.append(i);}
   $("#vEmoji").hidden=!!ph.length;$("#vEmoji").textContent=catEmoji(c);
   $("#vTitle").textContent=r.title||"מתכון ללא שם";
-  const m=$("#vMeta");m.innerHTML="";m.append(el("span",{class:"tag",text:c}));if(isWritten(r))m.append(el("span",{class:"tag done",text:"כתוב"}));
+  const m=$("#vMeta");m.innerHTML="";m.append(el("span",{class:"tag",text:c}));
   const lb=$("#vLink");lb.innerHTML="";const u=safeUrl(r.url);
   if(u){const s=sourceOf(u),[ic,t]=srcIcon(s);lb.append(linkBox(u,"לפוסט המקורי"+(s?" ב"+s:""),u,ic,t));}
   const S=$("#vSections");S.innerHTML="";
@@ -776,7 +771,7 @@ $("#vDelete").onclick=()=>$("#vConfirm").classList.add("open");
 $("#vConfirmNo").onclick=()=>$("#vConfirm").classList.remove("open");
 $("#vConfirmYes").onclick=async()=>{if(!guardWrite())return;const r=recipes.find(x=>x.id===currentId);
   try{await db.doc("recipes/"+currentId).delete();if(r)removeAssets(rPhotos(r));closeOv("#viewOv");toast("נמחק");}catch(err){handleWriteError(err);}};
-$("#search").addEventListener("input",render);$("#statusFilter").addEventListener("change",render);
+$("#search").addEventListener("input",render);
 
 /* ---------- categories editor ---------- */
 let draftCats=[];
